@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
+import 'package:circle_sync/screens/widgets/map_info.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -29,12 +31,44 @@ class _MapPageState extends State<MapPage> {
   StreamSubscription<Position>? _positionStreamSubscription;
   StreamSubscription<QuerySnapshot>? _locationsSubscription;
 
+  bool _useSimulation = true; // Simulation mode toggle
+
   @override
   void initState() {
     super.initState();
     _initInitialLocationAndRoute();
     _subscribeToLocationUpdates();
     _subscribeToOtherUsersLocations();
+  }
+
+  Stream<Position> _simulatePositionStream() async* {
+    double lat = _currentLocation?.latitude ?? 37.7749;
+    double lng = _currentLocation?.longitude ?? -122.4194;
+    int step = 0;
+
+    while (true) {
+      await Future.delayed(const Duration(seconds: 2));
+      step++;
+      double angle = step * 0.1;
+      double deltaLat = 0.001 * cos(angle);
+      double deltaLng = 0.001 * sin(angle);
+
+      lat += deltaLat;
+      lng += deltaLng;
+
+      yield Position(
+        latitude: lat,
+        longitude: lng,
+        timestamp: DateTime.now(),
+        accuracy: 10.0,
+        altitude: 0.0,
+        heading: 0.0,
+        speed: 1.0,
+        speedAccuracy: 0.0,
+        altitudeAccuracy: 0.0,
+        headingAccuracy: 0.0,
+      );
+    }
   }
 
   Future<Map<String, dynamic>> getRoute(
@@ -51,37 +85,46 @@ class _MapPageState extends State<MapPage> {
   }
 
   Future<void> _initInitialLocationAndRoute() async {
-    // Check location services and permissions
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) return;
+    if (!_useSimulation) {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return;
 
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied ||
-        permission == LocationPermission.deniedForever) {
-      permission = await Geolocator.requestPermission();
+      LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) return;
+          permission == LocationPermission.deniedForever) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied ||
+            permission == LocationPermission.deniedForever) return;
+      }
+
+      Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high);
+      LatLng current = LatLng(position.latitude, position.longitude);
+      LatLng destination =
+          LatLng(position.latitude + 0.01, position.longitude + 0.01);
+
+      setState(() {
+        _currentLocation = current;
+        _destinationLocation = destination;
+        _trackingPoints = [current];
+      });
+    } else {
+      LatLng current = LatLng(37.7749, -122.4194);
+      LatLng destination = LatLng(37.7849, -122.4094);
+      setState(() {
+        _currentLocation = current;
+        _destinationLocation = destination;
+        _trackingPoints = [current];
+      });
     }
 
-    // Get initial position
-    Position position = await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
-    );
-    LatLng current = LatLng(position.latitude, position.longitude);
-    // For demo: define a destination as a slight offset
-    LatLng destination =
-        LatLng(position.latitude + 0.01, position.longitude + 0.01);
-
-    // Set initial tracking point
-    setState(() {
-      _currentLocation = current;
-      _destinationLocation = destination;
-      _trackingPoints = [current];
-    });
-
     try {
-      Map<String, dynamic> routeData = await getRoute(current.latitude,
-          current.longitude, destination.latitude, destination.longitude);
+      Map<String, dynamic> routeData = await getRoute(
+        _currentLocation!.latitude,
+        _currentLocation!.longitude,
+        _destinationLocation!.latitude,
+        _destinationLocation!.longitude,
+      );
       List<dynamic> coordinates =
           routeData["routes"][0]["geometry"]["coordinates"];
       List<LatLng> routePoints = coordinates
@@ -91,7 +134,8 @@ class _MapPageState extends State<MapPage> {
       setState(() {
         _osrmRoutePoints = routePoints;
       });
-      mapController.move(current, 13.0);
+      // Set initial center and zoom only once when the map loads
+      mapController.move(_currentLocation!, 13.0);
     } catch (e) {
       debugPrint(e.toString());
     }
@@ -120,294 +164,119 @@ class _MapPageState extends State<MapPage> {
         .snapshots();
   }
 
-  Stream<DocumentSnapshot> getUserLocation(String circleId, String userId) {
-    return FirebaseFirestore.instance
-        .collection('circles')
-        .doc(circleId)
-        .collection('locations')
-        .doc(userId)
-        .snapshots();
-  }
-
   void _subscribeToLocationUpdates() {
-    // Get current user ID
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
     if (currentUserId == null) return;
 
-    // For demo purposes, we'll use a fixed circle ID
-    // In a real app, you would get this from the current user's active circle
     const String circleId = 'default_circle';
-    
-    // Update location every time the user moves 100 meters
-    LocationSettings locationSettings = const LocationSettings(
-      accuracy: LocationAccuracy.best,
-      distanceFilter: 100, // Update every 100 meters
-    );
-    
-    _positionStreamSubscription =
-        Geolocator.getPositionStream(locationSettings: locationSettings)
-            .listen((Position position) async {
-      LatLng updatedLocation = LatLng(position.latitude, position.longitude);
-      
-      // Add new location to tracking list if it's different
-      setState(() {
-        _currentLocation = updatedLocation;
-        _trackingPoints.add(updatedLocation);
-      });
 
-      // Update user location in Firestore
-      await updateUserLocation(
-        circleId,
-        currentUserId,
-        updatedLocation.latitude,
-        updatedLocation.longitude,
-      );
-      
-      // If destination is set, update OSRM route from new current location
-      if (_destinationLocation != null) {
-        try {
-          Map<String, dynamic> routeData = await getRoute(
-            updatedLocation.latitude,
-            updatedLocation.longitude,
-            _destinationLocation!.latitude,
-            _destinationLocation!.longitude,
-          );
-          List<dynamic> coordinates =
-              routeData["routes"][0]["geometry"]["coordinates"];
-          List<LatLng> updatedRoute = coordinates
-              .map((coord) => LatLng(coord[1] as double, coord[0] as double))
-              .toList();
-          setState(() {
-            _osrmRoutePoints = updatedRoute;
-          });
-          // Optionally re-center the map without changing zoom
-          mapController.move(updatedLocation, 20);
-        } catch (e) {
-          debugPrint(e.toString());
+    if (_useSimulation) {
+      _positionStreamSubscription =
+          _simulatePositionStream().listen((Position position) async {
+        LatLng updatedLocation = LatLng(position.latitude, position.longitude);
+
+        setState(() {
+          _currentLocation = updatedLocation;
+          _trackingPoints.add(updatedLocation);
+        });
+
+        await updateUserLocation(circleId, currentUserId,
+            updatedLocation.latitude, updatedLocation.longitude);
+
+        if (_destinationLocation != null) {
+          try {
+            Map<String, dynamic> routeData = await getRoute(
+              updatedLocation.latitude,
+              updatedLocation.longitude,
+              _destinationLocation!.latitude,
+              _destinationLocation!.longitude,
+            );
+            List<dynamic> coordinates =
+                routeData["routes"][0]["geometry"]["coordinates"];
+            List<LatLng> updatedRoute = coordinates
+                .map((coord) => LatLng(coord[1] as double, coord[0] as double))
+                .toList();
+            setState(() {
+              _osrmRoutePoints = updatedRoute;
+            });
+            // Removed mapController.move() to prevent auto-zoom/re-center
+          } catch (e) {
+            debugPrint(e.toString());
+          }
         }
-      }
-    });
+      });
+    } else {
+      LocationSettings locationSettings = const LocationSettings(
+        accuracy: LocationAccuracy.best,
+        distanceFilter: 100,
+      );
+      _positionStreamSubscription =
+          Geolocator.getPositionStream(locationSettings: locationSettings)
+              .listen((Position position) async {
+        LatLng updatedLocation = LatLng(position.latitude, position.longitude);
+
+        setState(() {
+          _currentLocation = updatedLocation;
+          _trackingPoints.add(updatedLocation);
+        });
+
+        await updateUserLocation(circleId, currentUserId,
+            updatedLocation.latitude, updatedLocation.longitude);
+
+        if (_destinationLocation != null) {
+          try {
+            Map<String, dynamic> routeData = await getRoute(
+              updatedLocation.latitude,
+              updatedLocation.longitude,
+              _destinationLocation!.latitude,
+              _destinationLocation!.longitude,
+            );
+            List<dynamic> coordinates =
+                routeData["routes"][0]["geometry"]["coordinates"];
+            List<LatLng> updatedRoute = coordinates
+                .map((coord) => LatLng(coord[1] as double, coord[0] as double))
+                .toList();
+            setState(() {
+              _osrmRoutePoints = updatedRoute;
+            });
+            // Removed mapController.move() to prevent auto-zoom/re-center
+          } catch (e) {
+            debugPrint(e.toString());
+          }
+        }
+      });
+    }
   }
 
   void _subscribeToOtherUsersLocations() {
-    // Get current user ID
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
     if (currentUserId == null) return;
 
-    // For demo purposes, we'll use a fixed circle ID
-    // In a real app, you would get this from the current user's active circle
     const String circleId = 'default_circle';
 
-    // Subscribe to all location updates in the circle
     _locationsSubscription = getCircleLocations(circleId).listen((snapshot) {
       final updatedLocations = <String, LatLng>{};
-      
+
       for (final doc in snapshot.docs) {
         final userId = doc['userId'] as String;
-        
-        // Skip the current user's location
         if (userId == currentUserId) continue;
-        
+
         final lat = doc['latitude'] as double;
         final lng = doc['longitude'] as double;
         updatedLocations[userId] = LatLng(lat, lng);
       }
-      
+
       setState(() {
         _otherUsersLocations = updatedLocations;
       });
     });
   }
 
-  void _showUserInfoDialog(String userId, LatLng location) {
-    debugPrint('Showing info dialog for user: $userId at location: $location');
-    
-    // Fetch user details from Firestore if available
-    FirebaseFirestore.instance.collection('users').doc(userId).get().then(
-      (userDoc) {
-        debugPrint('User document exists: ${userDoc.exists}');
-        if (userDoc.exists) {
-          debugPrint('User data: ${userDoc.data()}');
-        }
-        
-        String username = 'Unknown User';
-        String email = '';
-        
-        if (userDoc.exists) {
-          final data = userDoc.data();
-          if (data != null && data.containsKey('name')) {
-            username = data['name'] as String;
-          }
-          if (data != null && data.containsKey('email')) {
-            email = data['email'] as String;
-          }
-        }
-        
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('User Information'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Username: $username'),
-                const SizedBox(height: 8),
-                Text('User ID: $userId'),
-                const SizedBox(height: 8),
-                Text('Latitude: ${location.latitude.toStringAsFixed(6)}'),
-                Text('Longitude: ${location.longitude.toStringAsFixed(6)}'),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Close'),
-              ),
-              TextButton(
-                onPressed: () {
-                  final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-                  if (currentUserId != null) {
-                    final chatRoomId = _generateChatId(currentUserId, userId);
-                    
-                    // Create an AppUser object as required by the route generator
-                    final user = AppUser(
-                      id: userId,
-                      name: username,
-                      email: email,
-                    );
-                    
-                    // Close dialog first
-                    Navigator.of(context).pop();
-                    
-                    // Then navigate to chat using the correct route name from RouteGenerator
-                    Navigator.pushNamed(
-                      context,
-                      RouteGenerator.chatPage,
-                      arguments: {
-                        'user': user,
-                        'chatRoomId': chatRoomId,
-                        'otherUserId': userId,
-                      },
-                    );
-                  }
-                },
-                child: const Text('Chat'),
-              ),
-            ],
-          ),
-        );
-      },
-    ).catchError((error) {
-      debugPrint('Error fetching user data: $error');
-      
-      // Show a simpler dialog if we can't fetch user details
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('User Location'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('User ID: $userId'),
-              const SizedBox(height: 8),
-              Text('Latitude: ${location.latitude.toStringAsFixed(6)}'),
-              Text('Longitude: ${location.longitude.toStringAsFixed(6)}'),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Close'),
-            ),
-          ],
-        ),
-      );
-    });
-  }
-
-  String _generateChatId(String a, String b) {
-    final sortedIds = [a, b]..sort();
-    return sortedIds.join('_');
-  }
-
-  void _showCurrentUserInfoDialog(LatLng location) {
-    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-    if (currentUserId == null) return;
-    
-    // Fetch current user details from Firestore
-    FirebaseFirestore.instance.collection('users').doc(currentUserId).get().then(
-      (userDoc) {
-        String username = 'Me';
-        String email = '';
-        
-        if (userDoc.exists) {
-          final data = userDoc.data();
-          if (data != null && data.containsKey('name')) {
-            username = data['name'] as String;
-          }
-          if (data != null && data.containsKey('email')) {
-            email = data['email'] as String;
-          }
-        }
-        
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('My Location'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Username: $username'),
-                const SizedBox(height: 8),
-                Text('User ID: $currentUserId'),
-                const SizedBox(height: 8),
-                Text('Latitude: ${location.latitude.toStringAsFixed(6)}'),
-                Text('Longitude: ${location.longitude.toStringAsFixed(6)}'),
-                const SizedBox(height: 16),
-                const Text('This is your current location', 
-                  style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey)),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Close'),
-              ),
-            ],
-          ),
-        );
-      },
-    ).catchError((error) {
-      // Show a simpler dialog if we can't fetch user details
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('My Location'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('User ID: $currentUserId'),
-              const SizedBox(height: 8),
-              Text('Latitude: ${location.latitude.toStringAsFixed(6)}'),
-              Text('Longitude: ${location.longitude.toStringAsFixed(6)}'),
-              const SizedBox(height: 16),
-              const Text('This is your current location', 
-                style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey)),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Close'),
-            ),
-          ],
-        ),
-      );
-    });
+  // Optional: Add a method to manually re-center the map
+  void _recenterMap() {
+    if (_currentLocation != null) {
+      mapController.move(_currentLocation!, 13.0);
+    }
   }
 
   @override
@@ -425,14 +294,13 @@ class _MapPageState extends State<MapPage> {
         mapController: mapController,
         options: MapOptions(
           initialCenter: _currentLocation ?? LatLng(0, 0),
-          initialZoom: 20.0,
+          initialZoom: 13.0,
         ),
         children: [
           TileLayer(
             urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
             userAgentPackageName: 'com.example.yourapp',
           ),
-          // OSRM Route Polyline (blue)
           if (_osrmRoutePoints.isNotEmpty)
             PolylineLayer(
               polylines: [
@@ -443,7 +311,6 @@ class _MapPageState extends State<MapPage> {
                 ),
               ],
             ),
-          // Tracker Line Polyline (orange) for user's movement
           if (_trackingPoints.isNotEmpty)
             PolylineLayer(
               polylines: [
@@ -454,7 +321,6 @@ class _MapPageState extends State<MapPage> {
                 ),
               ],
             ),
-          // Other users' locations as markers
           MarkerLayer(
             markers: _otherUsersLocations.entries.map((entry) {
               return Marker(
@@ -463,15 +329,12 @@ class _MapPageState extends State<MapPage> {
                 height: 40,
                 child: GestureDetector(
                   onTap: () {
-                    _showUserInfoDialog(entry.key, entry.value);
+                    showUserInfoDialog(context, entry.key, entry.value);
                   },
                   child: Stack(
                     children: [
-                      const Icon(
-                        Icons.person_pin_circle,
-                        color: Colors.red,
-                        size: 40,
-                      ),
+                      const Icon(Icons.person_pin_circle,
+                          color: Colors.red, size: 40),
                       Positioned(
                         right: 0,
                         bottom: 0,
@@ -481,11 +344,8 @@ class _MapPageState extends State<MapPage> {
                             color: Colors.blue,
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Icon(
-                            Icons.info_outline,
-                            color: Colors.white,
-                            size: 14,
-                          ),
+                          child: const Icon(Icons.info_outline,
+                              color: Colors.white, size: 14),
                         ),
                       ),
                     ],
@@ -494,7 +354,6 @@ class _MapPageState extends State<MapPage> {
               );
             }).toList(),
           ),
-          // Markers for current location and destination
           MarkerLayer(
             markers: [
               if (_currentLocation != null)
@@ -504,15 +363,12 @@ class _MapPageState extends State<MapPage> {
                   height: 40,
                   child: GestureDetector(
                     onTap: () {
-                      _showCurrentUserInfoDialog(_currentLocation!);
+                      showCurrentUserInfoDialog(context, _currentLocation!);
                     },
                     child: Stack(
                       children: [
-                        const Icon(
-                          Icons.my_location,
-                          color: Colors.green, 
-                          size: 30,
-                        ),
+                        const Icon(Icons.my_location,
+                            color: Colors.green, size: 30),
                         Positioned(
                           right: 0,
                           bottom: 0,
@@ -522,11 +378,8 @@ class _MapPageState extends State<MapPage> {
                               color: Colors.blue,
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Icon(
-                              Icons.info_outline,
-                              color: Colors.white,
-                              size: 14,
-                            ),
+                            child: const Icon(Icons.info_outline,
+                                color: Colors.white, size: 14),
                           ),
                         ),
                       ],
@@ -543,6 +396,33 @@ class _MapPageState extends State<MapPage> {
           ),
         ],
       ),
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          FloatingActionButton(
+            onPressed: () {
+              setState(() {
+                _useSimulation = !_useSimulation;
+                _positionStreamSubscription?.cancel();
+                _subscribeToLocationUpdates();
+              });
+            },
+            tooltip: _useSimulation
+                ? 'Switch to Real Location'
+                : 'Switch to Simulation',
+            child:
+                Icon(_useSimulation ? Icons.location_on : Icons.location_off),
+          ),
+          const SizedBox(height: 10),
+          FloatingActionButton(
+            onPressed: _recenterMap,
+            tooltip: 'Re-center on Current Location',
+            child: const Icon(Icons.center_focus_strong),
+          ),
+        ],
+      ),
     );
   }
+
+  // Keep your existing `_showUserInfoDialog`, `_generateChatId`, `_showCurrentUserInfoDialog` methods unchanged
 }
