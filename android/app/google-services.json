@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "122381590147",
+    "project_id": "circle-sync-8a7ce",
+    "storage_bucket": "circle-sync-8a7ce.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:122381590147:android:1f2d01a9cb0196242c45b6",
+        "android_client_info": {
+          "package_name": "com.wolf.circlesync"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAYEKt53MJIsZJhoNpZFJfSnNDhp4hsbug"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
