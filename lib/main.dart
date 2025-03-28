@@ -1,3 +1,4 @@
+import 'package:circle_sync/home_page.dart';
 import 'package:circle_sync/login_page.dart';
 import 'package:circle_sync/providers/chat_provider.dart';
 import 'package:circle_sync/route_generator.dart';
@@ -50,7 +51,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       onGenerateRoute: RouteGenerator.generateRoute,
-      home: const MapPage(),
+      home: const HomePage(),
     );
   }
 }

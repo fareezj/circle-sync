@@ -6,6 +6,9 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../models/user.dart';
+import '../route_generator.dart';
 
 class MapPage extends StatefulWidget {
   const MapPage({super.key});
@@ -21,14 +24,17 @@ class _MapPageState extends State<MapPage> {
   LatLng? _destinationLocation;
   List<LatLng> _osrmRoutePoints = [];
   List<LatLng> _trackingPoints = [];
+  Map<String, LatLng> _otherUsersLocations = {};
 
   StreamSubscription<Position>? _positionStreamSubscription;
+  StreamSubscription<QuerySnapshot>? _locationsSubscription;
 
   @override
   void initState() {
     super.initState();
     _initInitialLocationAndRoute();
     _subscribeToLocationUpdates();
+    _subscribeToOtherUsersLocations();
   }
 
   Future<Map<String, dynamic>> getRoute(
@@ -114,22 +120,49 @@ class _MapPageState extends State<MapPage> {
         .snapshots();
   }
 
+  Stream<DocumentSnapshot> getUserLocation(String circleId, String userId) {
+    return FirebaseFirestore.instance
+        .collection('circles')
+        .doc(circleId)
+        .collection('locations')
+        .doc(userId)
+        .snapshots();
+  }
+
   void _subscribeToLocationUpdates() {
+    // Get current user ID
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    if (currentUserId == null) return;
+
+    // For demo purposes, we'll use a fixed circle ID
+    // In a real app, you would get this from the current user's active circle
+    const String circleId = 'default_circle';
+    
     // Update location every time the user moves 100 meters
     LocationSettings locationSettings = const LocationSettings(
       accuracy: LocationAccuracy.best,
-      distanceFilter: 100,
+      distanceFilter: 100, // Update every 100 meters
     );
+    
     _positionStreamSubscription =
         Geolocator.getPositionStream(locationSettings: locationSettings)
             .listen((Position position) async {
       LatLng updatedLocation = LatLng(position.latitude, position.longitude);
+      
       // Add new location to tracking list if it's different
       setState(() {
         _currentLocation = updatedLocation;
         _trackingPoints.add(updatedLocation);
       });
 
+      // Update user location in Firestore
+      await updateUserLocation(
+        circleId,
+        currentUserId,
+        updatedLocation.latitude,
+        updatedLocation.longitude,
+      );
+      
       // If destination is set, update OSRM route from new current location
       if (_destinationLocation != null) {
         try {
@@ -156,9 +189,231 @@ class _MapPageState extends State<MapPage> {
     });
   }
 
+  void _subscribeToOtherUsersLocations() {
+    // Get current user ID
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    if (currentUserId == null) return;
+
+    // For demo purposes, we'll use a fixed circle ID
+    // In a real app, you would get this from the current user's active circle
+    const String circleId = 'default_circle';
+
+    // Subscribe to all location updates in the circle
+    _locationsSubscription = getCircleLocations(circleId).listen((snapshot) {
+      final updatedLocations = <String, LatLng>{};
+      
+      for (final doc in snapshot.docs) {
+        final userId = doc['userId'] as String;
+        
+        // Skip the current user's location
+        if (userId == currentUserId) continue;
+        
+        final lat = doc['latitude'] as double;
+        final lng = doc['longitude'] as double;
+        updatedLocations[userId] = LatLng(lat, lng);
+      }
+      
+      setState(() {
+        _otherUsersLocations = updatedLocations;
+      });
+    });
+  }
+
+  void _showUserInfoDialog(String userId, LatLng location) {
+    debugPrint('Showing info dialog for user: $userId at location: $location');
+    
+    // Fetch user details from Firestore if available
+    FirebaseFirestore.instance.collection('users').doc(userId).get().then(
+      (userDoc) {
+        debugPrint('User document exists: ${userDoc.exists}');
+        if (userDoc.exists) {
+          debugPrint('User data: ${userDoc.data()}');
+        }
+        
+        String username = 'Unknown User';
+        String email = '';
+        
+        if (userDoc.exists) {
+          final data = userDoc.data();
+          if (data != null && data.containsKey('name')) {
+            username = data['name'] as String;
+          }
+          if (data != null && data.containsKey('email')) {
+            email = data['email'] as String;
+          }
+        }
+        
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('User Information'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Username: $username'),
+                const SizedBox(height: 8),
+                Text('User ID: $userId'),
+                const SizedBox(height: 8),
+                Text('Latitude: ${location.latitude.toStringAsFixed(6)}'),
+                Text('Longitude: ${location.longitude.toStringAsFixed(6)}'),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Close'),
+              ),
+              TextButton(
+                onPressed: () {
+                  final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+                  if (currentUserId != null) {
+                    final chatRoomId = _generateChatId(currentUserId, userId);
+                    
+                    // Create an AppUser object as required by the route generator
+                    final user = AppUser(
+                      id: userId,
+                      name: username,
+                      email: email,
+                    );
+                    
+                    // Close dialog first
+                    Navigator.of(context).pop();
+                    
+                    // Then navigate to chat using the correct route name from RouteGenerator
+                    Navigator.pushNamed(
+                      context,
+                      RouteGenerator.chatPage,
+                      arguments: {
+                        'user': user,
+                        'chatRoomId': chatRoomId,
+                        'otherUserId': userId,
+                      },
+                    );
+                  }
+                },
+                child: const Text('Chat'),
+              ),
+            ],
+          ),
+        );
+      },
+    ).catchError((error) {
+      debugPrint('Error fetching user data: $error');
+      
+      // Show a simpler dialog if we can't fetch user details
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('User Location'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('User ID: $userId'),
+              const SizedBox(height: 8),
+              Text('Latitude: ${location.latitude.toStringAsFixed(6)}'),
+              Text('Longitude: ${location.longitude.toStringAsFixed(6)}'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  String _generateChatId(String a, String b) {
+    final sortedIds = [a, b]..sort();
+    return sortedIds.join('_');
+  }
+
+  void _showCurrentUserInfoDialog(LatLng location) {
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    if (currentUserId == null) return;
+    
+    // Fetch current user details from Firestore
+    FirebaseFirestore.instance.collection('users').doc(currentUserId).get().then(
+      (userDoc) {
+        String username = 'Me';
+        String email = '';
+        
+        if (userDoc.exists) {
+          final data = userDoc.data();
+          if (data != null && data.containsKey('name')) {
+            username = data['name'] as String;
+          }
+          if (data != null && data.containsKey('email')) {
+            email = data['email'] as String;
+          }
+        }
+        
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('My Location'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Username: $username'),
+                const SizedBox(height: 8),
+                Text('User ID: $currentUserId'),
+                const SizedBox(height: 8),
+                Text('Latitude: ${location.latitude.toStringAsFixed(6)}'),
+                Text('Longitude: ${location.longitude.toStringAsFixed(6)}'),
+                const SizedBox(height: 16),
+                const Text('This is your current location', 
+                  style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey)),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Close'),
+              ),
+            ],
+          ),
+        );
+      },
+    ).catchError((error) {
+      // Show a simpler dialog if we can't fetch user details
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('My Location'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('User ID: $currentUserId'),
+              const SizedBox(height: 8),
+              Text('Latitude: ${location.latitude.toStringAsFixed(6)}'),
+              Text('Longitude: ${location.longitude.toStringAsFixed(6)}'),
+              const SizedBox(height: 16),
+              const Text('This is your current location', 
+                style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey)),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
   @override
   void dispose() {
     _positionStreamSubscription?.cancel();
+    _locationsSubscription?.cancel();
     super.dispose();
   }
 
@@ -199,14 +454,84 @@ class _MapPageState extends State<MapPage> {
                 ),
               ],
             ),
+          // Other users' locations as markers
+          MarkerLayer(
+            markers: _otherUsersLocations.entries.map((entry) {
+              return Marker(
+                point: entry.value,
+                width: 40,
+                height: 40,
+                child: GestureDetector(
+                  onTap: () {
+                    _showUserInfoDialog(entry.key, entry.value);
+                  },
+                  child: Stack(
+                    children: [
+                      const Icon(
+                        Icons.person_pin_circle,
+                        color: Colors.red,
+                        size: 40,
+                      ),
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: Colors.blue,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.info_outline,
+                            color: Colors.white,
+                            size: 14,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
           // Markers for current location and destination
           MarkerLayer(
             markers: [
               if (_currentLocation != null)
                 Marker(
                   point: _currentLocation!,
-                  child: const Icon(Icons.my_location,
-                      color: Colors.green, size: 30),
+                  width: 40,
+                  height: 40,
+                  child: GestureDetector(
+                    onTap: () {
+                      _showCurrentUserInfoDialog(_currentLocation!);
+                    },
+                    child: Stack(
+                      children: [
+                        const Icon(
+                          Icons.my_location,
+                          color: Colors.green, 
+                          size: 30,
+                        ),
+                        Positioned(
+                          right: 0,
+                          bottom: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: Colors.blue,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(
+                              Icons.info_outline,
+                              color: Colors.white,
+                              size: 14,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               if (_destinationLocation != null)
                 Marker(
