@@ -7,11 +7,28 @@ import 'package:circle_sync/services/chat_service.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 
-Future<void> main() async {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-
+  FlutterForegroundTask.init(
+    androidNotificationOptions: AndroidNotificationOptions(
+      channelId: 'foreground_service',
+      channelName: 'Circle Sync Location Service',
+      channelDescription: 'Keeps Circle Sync running in the background',
+      channelImportance: NotificationChannelImportance.LOW,
+      priority: NotificationPriority.LOW,
+    ),
+    iosNotificationOptions: const IOSNotificationOptions(
+      showNotification: true,
+      playSound: false,
+    ),
+    foregroundTaskOptions: ForegroundTaskOptions(
+      autoRunOnBoot: true, // Restart on device reboot (Android)
+      allowWifiLock: true, eventAction: ForegroundTaskEventAction.repeat(500),
+    ),
+  );
   runApp(
     MultiProvider(
       providers: [
