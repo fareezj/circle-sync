@@ -71,6 +71,32 @@ class UsersScreen extends StatelessWidget {
     );
   }
 
+  void _showAlertDialog(BuildContext context) {
+    TextEditingController nameController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Circle name'), // Title of the dialog
+          content: TextField(
+            controller: nameController,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                // Handle the confirm action here
+                String inputText = nameController.text;
+                print('User entered: $inputText');
+                Navigator.of(context).pop(); // Close the dialog
+              },
+              child: Text('Confirm'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   String _generateChatId(String a, String b) {
     final sortedIds = [a, b]..sort();
     return sortedIds.join('_');
