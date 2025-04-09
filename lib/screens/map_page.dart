@@ -33,11 +33,13 @@ class _MapPageState extends State<MapPage> {
   bool _hasCircle = false;
   String? _circleName;
   List<String> _circleMembers = [];
+  bool _isSharingLocation = true;
 
   @override
   void initState() {
     super.initState();
     _mapState = MapState();
+    _isSharingLocation = _locationService.isLocationSharing;
     _loadCircle();
   }
 
@@ -84,11 +86,7 @@ class _MapPageState extends State<MapPage> {
           _hasCircle = false;
         });
         await _locationService.initStaticLocation(
-          onLocationUpdate: (current) {
-            setState(() {
-              _mapState = _mapState.copyWith(currentLocation: current);
-            });
-          },
+          onLocationUpdate: onStaticLocationUpdate, // Use the new callback
           onTrackingUpdate: (trackingPoints) {
             setState(() {
               _mapState = _mapState.copyWith(trackingPoints: trackingPoints);
@@ -104,11 +102,7 @@ class _MapPageState extends State<MapPage> {
         _hasCircle = false;
       });
       await _locationService.initStaticLocation(
-        onLocationUpdate: (current) {
-          setState(() {
-            _mapState = _mapState.copyWith(currentLocation: current);
-          });
-        },
+        onLocationUpdate: onStaticLocationUpdate, // Use the new callback
         onTrackingUpdate: (trackingPoints) {
           setState(() {
             _mapState = _mapState.copyWith(trackingPoints: trackingPoints);
@@ -146,31 +140,32 @@ class _MapPageState extends State<MapPage> {
     }
   }
 
+  // Callback for initStaticLocation, which only provides a single LatLng
+  void onStaticLocationUpdate(LatLng updatedLocation) {
+    setState(() {
+      _mapState = _mapState.copyWith(
+        currentLocation: updatedLocation,
+      );
+    });
+  }
+
+  // Callback for subscribeToLocationUpdates, which provides LatLng and List<LatLng>
+  void onLocationUpdate(LatLng updatedLocation, List<LatLng> trackingPoints) {
+    setState(() {
+      _mapState = _mapState.copyWith(
+        currentLocation: updatedLocation,
+        trackingPoints: [..._mapState.trackingPoints, ...trackingPoints],
+      );
+    });
+  }
+
   void _subscribeToLocationUpdates() {
     if (_currentCircleId == null) return;
 
     _locationService.subscribeToLocationUpdates(
       circleId: _currentCircleId!,
       useSimulation: _useSimulation,
-      onLocationUpdate: (updatedLocation, trackingPoints) async {
-        setState(() {
-          _mapState = _mapState.copyWith(
-            currentLocation: updatedLocation,
-            trackingPoints: [..._mapState.trackingPoints, ...trackingPoints],
-          );
-        });
-        if (_mapState.destinationLocation != null) {
-          final routePoints = await _routeService.getRoute(
-            updatedLocation.latitude,
-            updatedLocation.longitude,
-            _mapState.destinationLocation!.latitude,
-            _mapState.destinationLocation!.longitude,
-          );
-          setState(() {
-            _mapState = _mapState.copyWith(osrmRoutePoints: routePoints);
-          });
-        }
-      },
+      onLocationUpdate: onLocationUpdate,
       destinationLocation: _mapState.destinationLocation,
     );
   }
@@ -262,6 +257,41 @@ class _MapPageState extends State<MapPage> {
               tooltip: 'View Circle Members',
               child: const Icon(Icons.group),
             ),
+          const SizedBox(height: 10),
+          FloatingActionButton(
+            tooltip: _isSharingLocation
+                ? 'Turn off location sharing'
+                : 'Turn on location sharing',
+            child: Icon(
+                _isSharingLocation ? Icons.gps_off_sharp : Icons.gps_fixed),
+            onPressed: () {
+              if (_currentCircleId == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('No circle selected')),
+                );
+                return;
+              }
+              if (_isSharingLocation) {
+                _locationService.pauseLocationSharing(
+                    _currentCircleId!, _mapState.currentLocation);
+                setState(() {
+                  _isSharingLocation = false;
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Location sharing paused')),
+                );
+              } else {
+                _locationService.resumeLocationSharing(
+                    _currentCircleId!, _mapState.currentLocation);
+                setState(() {
+                  _isSharingLocation = true;
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Location sharing resumed')),
+                );
+              }
+            },
+          ),
           const SizedBox(height: 10),
           FloatingActionButton(
             onPressed: () {

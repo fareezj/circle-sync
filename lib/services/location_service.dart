@@ -10,6 +10,10 @@ class LocationService {
   StreamSubscription<Position>? _positionStreamSubscription;
   StreamSubscription? _receivePortSubscription;
   bool _useSimulation = true;
+  bool _isLocationSharing = true; // Track whether location sharing is active
+
+  // Getter to expose the sharing state to MapPage
+  bool get isLocationSharing => _isLocationSharing;
 
   Future<void> initStaticLocation({
     required Function(LatLng) onLocationUpdate,
@@ -105,7 +109,6 @@ class LocationService {
     required String circleId,
     required bool useSimulation,
     required Function(LatLng, List<LatLng>) onLocationUpdate,
-    Function(List<LatLng>)? onRouteUpdate,
     LatLng? destinationLocation,
   }) async {
     _useSimulation = useSimulation;
@@ -119,13 +122,13 @@ class LocationService {
           _simulatePositionStream().listen((Position position) async {
         LatLng updatedLocation = LatLng(position.latitude, position.longitude);
 
+        // Always update the map locally
         onLocationUpdate(updatedLocation, [updatedLocation]);
 
-        await updateUserLocation(circleId, currentUserId,
-            updatedLocation.latitude, updatedLocation.longitude);
-
-        if (destinationLocation != null && onRouteUpdate != null) {
-          // Route updates will be handled by RouteService
+        // Only update Firestore if location sharing is active
+        if (_isLocationSharing) {
+          await updateUserLocation(circleId, currentUserId,
+              updatedLocation.latitude, updatedLocation.longitude, false);
         }
       });
     } else {
@@ -138,20 +141,20 @@ class LocationService {
               .listen((Position position) async {
         LatLng updatedLocation = LatLng(position.latitude, position.longitude);
 
+        // Always update the map locally
         onLocationUpdate(updatedLocation, [updatedLocation]);
 
-        await updateUserLocation(circleId, currentUserId,
-            updatedLocation.latitude, updatedLocation.longitude);
-
-        if (destinationLocation != null && onRouteUpdate != null) {
-          // Route updates will be handled by RouteService
+        // Only update Firestore if location sharing is active
+        if (_isLocationSharing) {
+          await updateUserLocation(circleId, currentUserId,
+              updatedLocation.latitude, updatedLocation.longitude, false);
         }
       });
     }
   }
 
-  Future<void> updateUserLocation(
-      String circleId, String userId, double lat, double lng) async {
+  Future<void> updateUserLocation(String circleId, String userId, double lat,
+      double lng, bool isPaused) async {
     await FirebaseFirestore.instance
         .collection('circles')
         .doc(circleId)
@@ -162,6 +165,7 @@ class LocationService {
       'latitude': lat,
       'longitude': lng,
       'lastUpdated': FieldValue.serverTimestamp(),
+      'isPaused': isPaused, // Indicate whether the user has paused sharing
     });
   }
 
@@ -192,6 +196,29 @@ class LocationService {
 
       onLocationsUpdate(updatedLocations);
     });
+  }
+
+  // Renamed from cancelLocationSharing to pauseLocationSharing for clarity
+  void pauseLocationSharing(String circleId, LatLng? lastKnownLocation) async {
+    _isLocationSharing = false;
+
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    if (currentUserId == null || lastKnownLocation == null) return;
+
+    // Update Firestore with the last known location and set isPaused to true
+    await updateUserLocation(circleId, currentUserId,
+        lastKnownLocation.latitude, lastKnownLocation.longitude, true);
+  }
+
+  void resumeLocationSharing(String circleId, LatLng? lastKnownLocation) async {
+    _isLocationSharing = true;
+
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    if (currentUserId == null || lastKnownLocation == null) return;
+
+    // Update Firestore with the last known location and set isPaused to false
+    await updateUserLocation(circleId, currentUserId,
+        lastKnownLocation.latitude, lastKnownLocation.longitude, false);
   }
 
   Future<void> startForegroundTask() async {
