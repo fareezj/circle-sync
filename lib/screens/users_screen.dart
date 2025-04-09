@@ -16,34 +16,34 @@ class UsersScreen extends StatelessWidget {
         'currentCircleId': null,
         'currentCircleName': null,
         'joinedCircles': <Circle>[],
-        'invitedCircles': <Circle>[],
+        'invitations': <Map<String, dynamic>>[],
       };
-    }
-
-    final userDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(currentUserId)
-        .get();
-    final currentCircleId = userDoc.data()?['currentCircleId'] as String?;
-
-    String? currentCircleName;
-    if (currentCircleId != null) {
-      final circleDoc = await FirebaseFirestore.instance
-          .collection('circles')
-          .doc(currentCircleId)
-          .get();
-      currentCircleName = circleDoc.data()?['name'] as String?;
     }
 
     final circleService = CircleService();
     final joinedCircles = await circleService.getUserCircles(currentUserId);
-    final invitedCircles = await circleService.getInvitedCircles(currentUserId);
+    final invitations = await circleService.getInvitations(currentUserId);
+
+    String? currentCircleId;
+    String? currentCircleName;
+    final memberships = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUserId)
+        .collection('circleMemberships')
+        .where('isActive', isEqualTo: true)
+        .get();
+
+    if (memberships.docs.isNotEmpty) {
+      currentCircleId = memberships.docs.first.id;
+      final circle = await circleService.getCircle(currentCircleId);
+      currentCircleName = circle.name;
+    }
 
     return {
       'currentCircleId': currentCircleId,
       'currentCircleName': currentCircleName,
       'joinedCircles': joinedCircles,
-      'invitedCircles': invitedCircles,
+      'invitations': invitations,
     };
   }
 
@@ -120,7 +120,9 @@ class UsersScreen extends StatelessWidget {
                   await FirebaseFirestore.instance
                       .collection('users')
                       .doc(userId)
-                      .update({'currentCircleId': null});
+                      .collection('circleMemberships')
+                      .doc(circleId)
+                      .delete();
                   Navigator.of(context).pop();
                 },
                 child: const Text('Leave Circle'),
@@ -159,8 +161,8 @@ class UsersScreen extends StatelessWidget {
                   snapshot.data!['currentCircleName'] as String?;
               final joinedCircles =
                   snapshot.data!['joinedCircles'] as List<Circle>;
-              final invitedCircles =
-                  snapshot.data!['invitedCircles'] as List<Circle>;
+              final invitations =
+                  snapshot.data!['invitations'] as List<Map<String, dynamic>>;
 
               return Padding(
                 padding: const EdgeInsets.all(8.0),
@@ -203,29 +205,51 @@ class UsersScreen extends StatelessWidget {
                           },
                         )),
                     const SizedBox(height: 8),
-                    const Text('Invited Circles',
+                    const Text('Invitations',
                         style: TextStyle(
                             fontSize: 16, fontWeight: FontWeight.bold)),
-                    if (invitedCircles.isEmpty)
+                    if (invitations.isEmpty)
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 8.0),
                         child: Text('You have no pending invitations.'),
                       ),
-                    ...invitedCircles.map((circle) => ListTile(
-                          title: Text(circle.name),
-                          trailing: const Icon(Icons.add),
-                          onTap: () async {
-                            final currentUserId =
-                                FirebaseAuth.instance.currentUser?.uid;
-                            if (currentUserId != null) {
-                              final circleService = CircleService();
-                              await circleService.setUserCurrentCircle(
-                                  currentUserId, circle.id);
-                              Navigator.pushNamed(
-                                  context, RouteGenerator.mapPage);
-                            }
-                          },
-                        )),
+                    ...invitations.map((invitation) {
+                      final circle = invitation['circle'] as Circle;
+                      final invitedBy = invitation['invitedBy'] as String;
+                      final invitationId = invitation['invitationId'] as String;
+                      return ListTile(
+                        title: Text(circle.name),
+                        subtitle: Text('Invited by: $invitedBy'),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon:
+                                  const Icon(Icons.check, color: Colors.green),
+                              onPressed: () async {
+                                final currentUserId =
+                                    FirebaseAuth.instance.currentUser?.uid;
+                                if (currentUserId != null) {
+                                  final circleService = CircleService();
+                                  await circleService.acceptInvitation(
+                                      invitationId, currentUserId);
+                                  Navigator.pushNamed(
+                                      context, RouteGenerator.mapPage);
+                                }
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close, color: Colors.red),
+                              onPressed: () async {
+                                final circleService = CircleService();
+                                await circleService
+                                    .declineInvitation(invitationId);
+                              },
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
                     const SizedBox(height: 8),
                     ElevatedButton(
                       onPressed: () {

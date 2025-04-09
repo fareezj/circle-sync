@@ -55,13 +55,15 @@ class _MapPageState extends State<MapPage> {
     if (currentUserId == null) return;
 
     try {
-      final userDoc = await FirebaseFirestore.instance
+      final memberships = await FirebaseFirestore.instance
           .collection('users')
           .doc(currentUserId)
+          .collection('circleMemberships')
+          .where('isActive', isEqualTo: true)
           .get();
-      final circleId = userDoc.data()?['currentCircleId'] as String?;
 
-      if (circleId != null) {
+      if (memberships.docs.isNotEmpty) {
+        final circleId = memberships.docs.first.id;
         final circle = await _circleService.getCircle(circleId);
         setState(() {
           _currentCircleId = circleId;
