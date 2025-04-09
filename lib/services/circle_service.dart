@@ -17,28 +17,10 @@ class CircleService {
       name: name,
       createdBy: currentUserId,
       dateCreated: DateTime.now(),
-      members: [
-        currentUserId,
-        ...memberIds
-      ], // Optional: can be removed if using circleMemberships
+      members: [currentUserId, ...memberIds],
     );
 
     await circleRef.set(newCircle.toMap());
-
-    // Add the creator to the circleMemberships subcollection
-    await _firestore
-        .collection('users')
-        .doc(currentUserId)
-        .collection('circleMemberships')
-        .doc(circleRef.id)
-        .set({
-      'role': 'admin',
-      'joinedAt': FieldValue.serverTimestamp(),
-      'isActive': true,
-    });
-
-    // Set as the creator's current circle
-    await setUserCurrentCircle(currentUserId, circleRef.id);
 
     return circleRef.id;
   }
@@ -82,13 +64,10 @@ class CircleService {
         .get();
     final circleId = invitationDoc.data()!['circleId'] as String;
 
-    // Add the user to the circle's members list (optional)
+    // Add the user to the circle's members list
     await _firestore.collection('circles').doc(circleId).update({
       'members': FieldValue.arrayUnion([userId]),
     });
-
-    // Add the circle to the user's circleMemberships
-    await setUserCurrentCircle(userId, circleId);
   }
 
   Future<void> declineInvitation(String invitationId) async {
@@ -98,43 +77,10 @@ class CircleService {
     });
   }
 
-  Future<void> setUserCurrentCircle(String userId, String circleId) async {
-    // Deactivate all other circles
-    final memberships = await _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('circleMemberships')
-        .get();
-    for (var doc in memberships.docs) {
-      await doc.reference.update({'isActive': false});
-    }
-
-    // Activate the selected circle (and add to memberships if not already there)
-    await _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('circleMemberships')
-        .doc(circleId)
-        .set({
-      'role': 'member',
-      'joinedAt': FieldValue.serverTimestamp(),
-      'isActive': true,
-    }, SetOptions(merge: true));
-  }
-
   Future<List<Circle>> getUserCircles(String userId) async {
-    final memberships = await _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('circleMemberships')
-        .get();
-
-    final circleIds = memberships.docs.map((doc) => doc.id).toList();
-    if (circleIds.isEmpty) return [];
-
     final querySnapshot = await _firestore
         .collection('circles')
-        .where(FieldPath.documentId, whereIn: circleIds)
+        .where('members', arrayContains: userId)
         .get();
 
     return querySnapshot.docs.map((doc) => Circle.fromDocument(doc)).toList();

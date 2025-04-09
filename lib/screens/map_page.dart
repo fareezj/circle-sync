@@ -2,17 +2,20 @@ import 'package:circle_sync/models/map_state_model.dart';
 import 'package:circle_sync/screens/widgets/circle_info_card.dart';
 import 'package:circle_sync/screens/widgets/map_widgets.dart';
 import 'package:circle_sync/screens/widgets/members_bottom_sheet.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:circle_sync/services/circle_service.dart';
 import 'package:circle_sync/services/location_service.dart';
 import 'package:circle_sync/services/route_service.dart';
 import 'package:circle_sync/screens/widgets/map_info.dart';
+import '../route_generator.dart';
 
 class MapPage extends StatefulWidget {
-  const MapPage({super.key});
+  final String? circleId;
+
+  const MapPage({super.key, this.circleId});
 
   @override
   State<MapPage> createState() => _MapPageState();
@@ -35,26 +38,15 @@ class _MapPageState extends State<MapPage> {
   void initState() {
     super.initState();
     _mapState = MapState();
-    _checkForCircle();
+    _loadCircle();
   }
 
-  Future<void> _checkForCircle() async {
-    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-    if (currentUserId == null) return;
-
-    try {
-      final memberships = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(currentUserId)
-          .collection('circleMemberships')
-          .where('isActive', isEqualTo: true)
-          .get();
-
-      if (memberships.docs.isNotEmpty) {
-        final circleId = memberships.docs.first.id;
-        final circle = await _circleService.getCircle(circleId);
+  Future<void> _loadCircle() async {
+    if (widget.circleId != null) {
+      try {
+        final circle = await _circleService.getCircle(widget.circleId!);
         setState(() {
-          _currentCircleId = circleId;
+          _currentCircleId = widget.circleId;
           _hasCircle = true;
           _circleName = circle.name;
           _circleMembers = circle.members;
@@ -86,7 +78,8 @@ class _MapPageState extends State<MapPage> {
         );
         _subscribeToLocationUpdates();
         _subscribeToOtherUsersLocations();
-      } else {
+      } catch (e) {
+        debugPrint('Error loading circle: $e');
         setState(() {
           _hasCircle = false;
         });
@@ -106,8 +99,7 @@ class _MapPageState extends State<MapPage> {
           mapController.move(_mapState.currentLocation!, 13.0);
         }
       }
-    } catch (e) {
-      debugPrint('Error checking for circle: $e');
+    } else {
       setState(() {
         _hasCircle = false;
       });
@@ -135,7 +127,6 @@ class _MapPageState extends State<MapPage> {
 
     try {
       final circleId = await _circleService.createCircle('My First Circle', []);
-      await _circleService.setUserCurrentCircle(currentUserId, circleId);
       final circle = await _circleService.getCircle(circleId);
       setState(() {
         _currentCircleId = circleId;

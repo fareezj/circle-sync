@@ -1,11 +1,9 @@
+import 'package:circle_sync/login_page.dart';
 import 'package:circle_sync/register_page.dart';
-import 'package:circle_sync/screens/error_screen.dart';
-import 'package:circle_sync/screens/map_page.dart';
 import 'package:flutter/material.dart';
-import '../login_page.dart';
-import '../home_page.dart';
-import '../screens/chat_screen.dart';
-import '../models/user.dart'; // assuming User model is defined in this file
+import 'package:circle_sync/screens/users_screen.dart';
+import 'package:circle_sync/screens/map_page.dart';
+import 'package:circle_sync/screens/chat_screen.dart';
 
 class RouteGenerator {
   static const String loginPage = '/login';
@@ -13,40 +11,36 @@ class RouteGenerator {
   static const String chatPage = '/chat';
   static const String registerPage = '/registerPage';
   static const String mapPage = '/mapPage';
+  static const String usersPage = '/usersPage';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
       case RouteGenerator.loginPage:
-        return MaterialPageRoute(builder: (_) => LoginPage());
-      case RouteGenerator.homePage:
-        return MaterialPageRoute(builder: (_) => const HomePage());
+        return MaterialPageRoute(builder: (_) => const LoginPage());
       case RouteGenerator.registerPage:
         return MaterialPageRoute(builder: (_) => const RegisterPage());
-      case RouteGenerator.mapPage:
-        return MaterialPageRoute(builder: (_) => const MapPage());
-      case RouteGenerator.chatPage:
-        if (settings.arguments is! Map<String, dynamic>) {
-          return ErrorScreen.route('Invalid chat parameters format');
-        }
+      case usersPage:
+        return MaterialPageRoute(builder: (_) => const UsersScreen());
+      case mapPage:
+        final args = settings.arguments as Map<String, dynamic>?;
+        return MaterialPageRoute(
+          builder: (_) => MapPage(circleId: args?['circleId'] as String?),
+        );
+      case chatPage:
         final args = settings.arguments as Map<String, dynamic>;
-
-        try {
-          final user = args['user'] as AppUser;
-          final chatRoomId = args['chatRoomId'] as String;
-          final otherUserId = args['otherUserId'] as String;
-
-          return MaterialPageRoute(
-              builder: (_) => ChatScreen(
-                    user: user,
-                    chatRoomId: chatRoomId,
-                    otherUserId: otherUserId,
-                  ));
-        } catch (e) {
-          return ErrorScreen.route(
-              'Missing or invalid chat parameters: ${e.toString()}');
-        }
+        return MaterialPageRoute(
+          builder: (_) => ChatScreen(
+            user: args['user'],
+            chatRoomId: args['chatRoomId'],
+            otherUserId: args['otherUserId'],
+          ),
+        );
       default:
-        return MaterialPageRoute(builder: (_) => const LoginPage());
+        return MaterialPageRoute(
+          builder: (_) => const Scaffold(
+            body: Center(child: Text('Route not found')),
+          ),
+        );
     }
   }
 }

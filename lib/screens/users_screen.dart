@@ -13,8 +13,6 @@ class UsersScreen extends StatelessWidget {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
     if (currentUserId == null) {
       return {
-        'currentCircleId': null,
-        'currentCircleName': null,
         'joinedCircles': <Circle>[],
         'invitations': <Map<String, dynamic>>[],
       };
@@ -24,24 +22,7 @@ class UsersScreen extends StatelessWidget {
     final joinedCircles = await circleService.getUserCircles(currentUserId);
     final invitations = await circleService.getInvitations(currentUserId);
 
-    String? currentCircleId;
-    String? currentCircleName;
-    final memberships = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(currentUserId)
-        .collection('circleMemberships')
-        .where('isActive', isEqualTo: true)
-        .get();
-
-    if (memberships.docs.isNotEmpty) {
-      currentCircleId = memberships.docs.first.id;
-      final circle = await circleService.getCircle(currentCircleId);
-      currentCircleName = circle.name;
-    }
-
     return {
-      'currentCircleId': currentCircleId,
-      'currentCircleName': currentCircleName,
       'joinedCircles': joinedCircles,
       'invitations': invitations,
     };
@@ -65,7 +46,7 @@ class UsersScreen extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop();
+                Navigator.pop(context);
               },
               child: const Text('Cancel'),
             ),
@@ -77,9 +58,12 @@ class UsersScreen extends StatelessWidget {
                     final circleService = CircleService();
                     final circleId =
                         await circleService.createCircle(circleName, []);
-                    await circleService.setUserCurrentCircle(userId, circleId);
                     Navigator.of(context).pop();
-                    Navigator.pushNamed(context, RouteGenerator.mapPage);
+                    Navigator.pushNamed(
+                      context,
+                      RouteGenerator.mapPage,
+                      arguments: {'circleId': circleId},
+                    );
                   } catch (e) {
                     debugPrint('Error creating circle: $e');
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -96,8 +80,8 @@ class UsersScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _showCircleOptionsDialog(BuildContext context, String userId,
-      String circleId, String? circleName) async {
+  Future<void> _showCircleOptionsDialog(
+      BuildContext context, String circleId, String? circleName) async {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -107,23 +91,28 @@ class UsersScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               ElevatedButton(
-                onPressed: () async {
-                  final circleService = CircleService();
-                  await circleService.setUserCurrentCircle(userId, circleId);
+                onPressed: () {
                   Navigator.of(context).pop();
-                  Navigator.pushNamed(context, RouteGenerator.mapPage);
+                  Navigator.pushNamed(
+                    context,
+                    RouteGenerator.mapPage,
+                    arguments: {'circleId': circleId},
+                  );
                 },
                 child: const Text('Go to Map'),
               ),
               ElevatedButton(
                 onPressed: () async {
-                  await FirebaseFirestore.instance
-                      .collection('users')
-                      .doc(userId)
-                      .collection('circleMemberships')
-                      .doc(circleId)
-                      .delete();
-                  Navigator.of(context).pop();
+                  final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+                  if (currentUserId != null) {
+                    await FirebaseFirestore.instance
+                        .collection('circles')
+                        .doc(circleId)
+                        .update({
+                      'members': FieldValue.arrayRemove([currentUserId]),
+                    });
+                    Navigator.of(context).pop();
+                  }
                 },
                 child: const Text('Leave Circle'),
               ),
@@ -145,6 +134,13 @@ class UsersScreen extends StatelessWidget {
       appBar: AppBar(title: const Text('Select User')),
       body: Column(
         children: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () {
+              FirebaseAuth.instance.signOut();
+              Navigator.popAndPushNamed(context, '/login');
+            },
+          ),
           FutureBuilder<Map<String, dynamic>>(
             future: _getCircleInfo(),
             builder: (context, snapshot) {
@@ -155,10 +151,6 @@ class UsersScreen extends StatelessWidget {
                 );
               }
 
-              final currentCircleId =
-                  snapshot.data!['currentCircleId'] as String?;
-              final currentCircleName =
-                  snapshot.data!['currentCircleName'] as String?;
               final joinedCircles =
                   snapshot.data!['joinedCircles'] as List<Circle>;
               final invitations =
@@ -169,21 +161,6 @@ class UsersScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (currentCircleId != null)
-                      ListTile(
-                        title: Text(
-                            'Current Circle: ${currentCircleName ?? "Unknown"}'),
-                        trailing: const Icon(Icons.arrow_forward),
-                        onTap: () {
-                          final currentUserId =
-                              FirebaseAuth.instance.currentUser?.uid;
-                          if (currentUserId != null) {
-                            _showCircleOptionsDialog(context, currentUserId,
-                                currentCircleId, currentCircleName);
-                          }
-                        },
-                      ),
-                    const SizedBox(height: 8),
                     const Text('Joined Circles',
                         style: TextStyle(
                             fontSize: 16, fontWeight: FontWeight.bold)),
@@ -196,12 +173,8 @@ class UsersScreen extends StatelessWidget {
                           title: Text(circle.name),
                           trailing: const Icon(Icons.arrow_forward),
                           onTap: () {
-                            final currentUserId =
-                                FirebaseAuth.instance.currentUser?.uid;
-                            if (currentUserId != null) {
-                              _showCircleOptionsDialog(context, currentUserId,
-                                  circle.id, circle.name);
-                            }
+                            _showCircleOptionsDialog(
+                                context, circle.id, circle.name);
                           },
                         )),
                     const SizedBox(height: 8),
@@ -234,7 +207,10 @@ class UsersScreen extends StatelessWidget {
                                   await circleService.acceptInvitation(
                                       invitationId, currentUserId);
                                   Navigator.pushNamed(
-                                      context, RouteGenerator.mapPage);
+                                    context,
+                                    RouteGenerator.mapPage,
+                                    arguments: {'circleId': circle.id},
+                                  );
                                 }
                               },
                             ),

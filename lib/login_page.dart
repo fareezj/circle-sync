@@ -27,7 +27,7 @@ class _LoginPageState extends State<LoginPage> {
         password: _passwordController.text,
       );
       // Navigate to home page on success
-      Navigator.pushReplacementNamed(context, RouteGenerator.homePage);
+      Navigator.pushReplacementNamed(context, RouteGenerator.usersPage);
     } catch (e) {
       setState(() {
         _errorMessage = e.toString();
