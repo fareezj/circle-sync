@@ -1,5 +1,6 @@
-import 'package:circle_sync/login_page.dart';
-import 'package:circle_sync/register_page.dart';
+import 'package:circle_sync/screens/login_page.dart';
+import 'package:circle_sync/screens/main_screen.dart';
+import 'package:circle_sync/screens/register_page.dart';
 import 'package:flutter/material.dart';
 import 'package:circle_sync/screens/users_screen.dart';
 import 'package:circle_sync/screens/map_page.dart';
@@ -7,6 +8,7 @@ import 'package:circle_sync/screens/chat_screen.dart';
 
 class RouteGenerator {
   static const String loginPage = '/login';
+  static const String mainPage = '/main';
   static const String homePage = '/home';
   static const String chatPage = '/chat';
   static const String registerPage = '/registerPage';
@@ -15,6 +17,8 @@ class RouteGenerator {
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
+      case RouteGenerator.mainPage:
+        return MaterialPageRoute(builder: (_) => const MainPage());
       case RouteGenerator.loginPage:
         return MaterialPageRoute(builder: (_) => const LoginPage());
       case RouteGenerator.registerPage:

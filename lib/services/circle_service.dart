@@ -12,7 +12,7 @@ class CircleService {
     }
 
     final circleRef = _firestore.collection('circles').doc();
-    final newCircle = Circle(
+    final newCircle = CircleModel(
       id: circleRef.id,
       name: name,
       createdBy: currentUserId,
@@ -25,12 +25,12 @@ class CircleService {
     return circleRef.id;
   }
 
-  Future<Circle> getCircle(String circleId) async {
+  Future<CircleModel> getCircle(String circleId) async {
     final doc = await _firestore.collection('circles').doc(circleId).get();
     if (!doc.exists) {
       throw Exception('Circle not found');
     }
-    return Circle.fromDocument(doc);
+    return CircleModel.fromDocument(doc);
   }
 
   Future<void> addMember(String circleId, String userId) async {
@@ -77,13 +77,15 @@ class CircleService {
     });
   }
 
-  Future<List<Circle>> getUserCircles(String userId) async {
+  Future<List<CircleModel>> getUserCircles(String userId) async {
     final querySnapshot = await _firestore
         .collection('circles')
         .where('members', arrayContains: userId)
         .get();
 
-    return querySnapshot.docs.map((doc) => Circle.fromDocument(doc)).toList();
+    return querySnapshot.docs
+        .map((doc) => CircleModel.fromDocument(doc))
+        .toList();
   }
 
   Future<List<Map<String, dynamic>>> getInvitations(String userId) async {
@@ -100,7 +102,7 @@ class CircleService {
       final circleDoc =
           await _firestore.collection('circles').doc(circleId).get();
       if (circleDoc.exists) {
-        final circle = Circle.fromDocument(circleDoc);
+        final circle = CircleModel.fromDocument(circleDoc);
         invitationDetails.add({
           'invitationId': doc.id,
           'circle': circle,
@@ -110,5 +112,24 @@ class CircleService {
       }
     }
     return invitationDetails;
+  }
+
+  Future<Map<String, dynamic>> getCircleInfo() async {
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    if (currentUserId == null) {
+      return {
+        'joinedCircles': <CircleModel>[],
+        'invitations': <Map<String, dynamic>>[],
+      };
+    }
+
+    final circleService = CircleService();
+    final joinedCircles = await circleService.getUserCircles(currentUserId);
+    final invitations = await circleService.getInvitations(currentUserId);
+
+    return {
+      'joinedCircles': joinedCircles,
+      'invitations': invitations,
+    };
   }
 }

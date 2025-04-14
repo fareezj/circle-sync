@@ -13,7 +13,7 @@ class UsersScreen extends StatelessWidget {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
     if (currentUserId == null) {
       return {
-        'joinedCircles': <Circle>[],
+        'joinedCircles': <CircleModel>[],
         'invitations': <Map<String, dynamic>>[],
       };
     }
@@ -152,7 +152,7 @@ class UsersScreen extends StatelessWidget {
               }
 
               final joinedCircles =
-                  snapshot.data!['joinedCircles'] as List<Circle>;
+                  snapshot.data!['joinedCircles'] as List<CircleModel>;
               final invitations =
                   snapshot.data!['invitations'] as List<Map<String, dynamic>>;
 
@@ -187,7 +187,7 @@ class UsersScreen extends StatelessWidget {
                         child: Text('You have no pending invitations.'),
                       ),
                     ...invitations.map((invitation) {
-                      final circle = invitation['circle'] as Circle;
+                      final circle = invitation['circle'] as CircleModel;
                       final invitedBy = invitation['invitedBy'] as String;
                       final invitationId = invitation['invitationId'] as String;
                       return ListTile(

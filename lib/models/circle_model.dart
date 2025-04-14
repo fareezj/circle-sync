@@ -1,13 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class Circle {
+class CircleModel {
   final String id;
   final String name;
   final String createdBy;
   final DateTime dateCreated;
   final List<String> members;
 
-  Circle({
+  CircleModel({
     required this.id,
     required this.name,
     required this.createdBy,
@@ -15,7 +15,7 @@ class Circle {
     required this.members,
   });
 
-  // Convert Circle to Firestore map
+  // Convert CircleModel to Firestore map
   Map<String, dynamic> toMap() {
     return {
       'name': name,
@@ -25,10 +25,10 @@ class Circle {
     };
   }
 
-  // Create Circle from Firestore document
-  factory Circle.fromDocument(DocumentSnapshot doc) {
+  // Create CircleModel from Firestore document
+  factory CircleModel.fromDocument(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
-    return Circle(
+    return CircleModel(
       id: doc.id,
       name: data['name'] ?? '',
       createdBy: data['createdBy'] ?? '',

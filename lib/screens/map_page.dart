@@ -1,3 +1,4 @@
+import 'package:circle_sync/models/circle_model.dart';
 import 'package:circle_sync/models/map_state_model.dart';
 import 'package:circle_sync/screens/widgets/circle_info_card.dart';
 import 'package:circle_sync/screens/widgets/create_circle_dialog.dart';
@@ -40,15 +41,21 @@ class _MapPageState extends State<MapPage> {
     super.initState();
     _mapState = MapState();
     _isSharingLocation = _locationService.isLocationSharing;
-    _loadCircle();
+    loadCircle();
   }
 
-  Future<void> _loadCircle() async {
-    if (widget.circleId != null) {
+  Future<void> loadCircle() async {
+    Map<String, dynamic> circleList = await _circleService.getCircleInfo();
+    var joinedCircles = circleList['joinedCircles'] as List<CircleModel>;
+    _loadCircleDetails(joinedCircles[0].id);
+  }
+
+  Future<void> _loadCircleDetails(String? circleId) async {
+    if (circleId != null) {
       try {
-        final circle = await _circleService.getCircle(widget.circleId!);
+        final circle = await _circleService.getCircle(circleId);
         setState(() {
-          _currentCircleId = widget.circleId;
+          _currentCircleId = circleId;
           _hasCircle = true;
           _circleName = circle.name;
           _circleMembers = circle.members;
@@ -138,87 +145,6 @@ class _MapPageState extends State<MapPage> {
             content: Text('Failed to create circle. Please try again.')),
       );
     }
-  }
-
-  // Callback for initStaticLocation, which only provides a single LatLng
-  void onStaticLocationUpdate(LatLng updatedLocation) {
-    setState(() {
-      _mapState = _mapState.copyWith(
-        currentLocation: updatedLocation,
-      );
-    });
-  }
-
-  // Callback for subscribeToLocationUpdates, which provides LatLng and List<LatLng>
-  void onLocationUpdate(LatLng updatedLocation, List<LatLng> trackingPoints) {
-    setState(() {
-      _mapState = _mapState.copyWith(
-        currentLocation: updatedLocation,
-        trackingPoints: [..._mapState.trackingPoints, ...trackingPoints],
-      );
-    });
-  }
-
-  void _subscribeToLocationUpdates() {
-    if (_currentCircleId == null) return;
-
-    _locationService.subscribeToLocationUpdates(
-      circleId: _currentCircleId!,
-      useSimulation: _useSimulation,
-      onLocationUpdate: onLocationUpdate,
-      destinationLocation: _mapState.destinationLocation,
-    );
-  }
-
-  void _subscribeToOtherUsersLocations() {
-    if (_currentCircleId == null) return;
-
-    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-    if (currentUserId == null) return;
-
-    _locationService.subscribeToOtherUsersLocations(
-      circleId: _currentCircleId!,
-      currentUserId: currentUserId,
-      onLocationsUpdate: (updatedLocations) {
-        setState(() {
-          _mapState = _mapState.copyWith(otherUsersLocations: updatedLocations);
-        });
-      },
-    );
-  }
-
-  void _recenterMap() {
-    if (_mapState.currentLocation != null) {
-      mapController.move(_mapState.currentLocation!, 13.0);
-    }
-  }
-
-  void _showMembersBottomSheet() {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => MembersBottomSheet(
-        members: _circleMembers,
-        circleId: _currentCircleId!,
-        otherUsersLocations: _mapState.otherUsersLocations,
-        onMemberSelected: (memberId) {
-          final memberLocation = _mapState.otherUsersLocations[memberId];
-          if (memberLocation != null) {
-            mapController.move(memberLocation, 13.0);
-          }
-        },
-        onMemberAdded: (userId) {
-          setState(() {
-            _circleMembers.add(userId);
-          });
-        },
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    _locationService.dispose();
-    super.dispose();
   }
 
   @override
@@ -320,5 +246,86 @@ class _MapPageState extends State<MapPage> {
         ],
       ),
     );
+  }
+
+  // Callback for initStaticLocation, which only provides a single LatLng
+  void onStaticLocationUpdate(LatLng updatedLocation) {
+    setState(() {
+      _mapState = _mapState.copyWith(
+        currentLocation: updatedLocation,
+      );
+    });
+  }
+
+  // Callback for subscribeToLocationUpdates, which provides LatLng and List<LatLng>
+  void onLocationUpdate(LatLng updatedLocation, List<LatLng> trackingPoints) {
+    setState(() {
+      _mapState = _mapState.copyWith(
+        currentLocation: updatedLocation,
+        trackingPoints: [..._mapState.trackingPoints, ...trackingPoints],
+      );
+    });
+  }
+
+  void _subscribeToLocationUpdates() {
+    if (_currentCircleId == null) return;
+
+    _locationService.subscribeToLocationUpdates(
+      circleId: _currentCircleId!,
+      useSimulation: _useSimulation,
+      onLocationUpdate: onLocationUpdate,
+      destinationLocation: _mapState.destinationLocation,
+    );
+  }
+
+  void _subscribeToOtherUsersLocations() {
+    if (_currentCircleId == null) return;
+
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    if (currentUserId == null) return;
+
+    _locationService.subscribeToOtherUsersLocations(
+      circleId: _currentCircleId!,
+      currentUserId: currentUserId,
+      onLocationsUpdate: (updatedLocations) {
+        setState(() {
+          _mapState = _mapState.copyWith(otherUsersLocations: updatedLocations);
+        });
+      },
+    );
+  }
+
+  void _recenterMap() {
+    if (_mapState.currentLocation != null) {
+      mapController.move(_mapState.currentLocation!, 13.0);
+    }
+  }
+
+  void _showMembersBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => MembersBottomSheet(
+        members: _circleMembers,
+        circleId: _currentCircleId ?? '',
+        otherUsersLocations: _mapState.otherUsersLocations,
+        onMemberSelected: (memberId) {
+          final memberLocation = _mapState.otherUsersLocations[memberId];
+          if (memberLocation != null) {
+            mapController.move(memberLocation, 13.0);
+          }
+        },
+        onMemberAdded: (userId) {
+          setState(() {
+            _circleMembers.add(userId);
+          });
+        },
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _locationService.dispose();
+    super.dispose();
   }
 }

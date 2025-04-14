@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'route_generator.dart';
+import '../route_generator.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -27,7 +27,7 @@ class _LoginPageState extends State<LoginPage> {
         password: _passwordController.text,
       );
       // Navigate to home page on success
-      Navigator.pushReplacementNamed(context, RouteGenerator.mapPage);
+      Navigator.pushReplacementNamed(context, RouteGenerator.mainPage);
     } catch (e) {
       setState(() {
         _errorMessage = e.toString();
