@@ -1,5 +1,6 @@
 import 'package:circle_sync/models/map_state_model.dart';
 import 'package:circle_sync/screens/widgets/circle_info_card.dart';
+import 'package:circle_sync/screens/widgets/create_circle_dialog.dart';
 import 'package:circle_sync/screens/widgets/map_widgets.dart';
 import 'package:circle_sync/screens/widgets/members_bottom_sheet.dart';
 import 'package:flutter/material.dart';
@@ -10,7 +11,6 @@ import 'package:circle_sync/services/circle_service.dart';
 import 'package:circle_sync/services/location_service.dart';
 import 'package:circle_sync/services/route_service.dart';
 import 'package:circle_sync/screens/widgets/map_info.dart';
-import '../route_generator.dart';
 
 class MapPage extends StatefulWidget {
   final String? circleId;
@@ -115,12 +115,12 @@ class _MapPageState extends State<MapPage> {
     }
   }
 
-  Future<void> _createCircleAndJoin() async {
+  Future<void> _createCircleAndJoin(String circleName) async {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
     if (currentUserId == null) return;
 
     try {
-      final circleId = await _circleService.createCircle('My First Circle', []);
+      final circleId = await _circleService.createCircle(circleName, []);
       final circle = await _circleService.getCircle(circleId);
       setState(() {
         _currentCircleId = circleId;
@@ -244,7 +244,12 @@ class _MapPageState extends State<MapPage> {
                 CircleInfoCard(
                   hasCircle: _hasCircle,
                   circleName: _circleName,
-                  onCreateCircle: _createCircleAndJoin,
+                  onCreateCircle: () {
+                    createCircleDialog(
+                      context,
+                      (String circleName) => _createCircleAndJoin(circleName),
+                    );
+                  },
                 ),
               ],
             ),

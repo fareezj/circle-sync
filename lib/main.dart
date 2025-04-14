@@ -68,7 +68,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       onGenerateRoute: RouteGenerator.generateRoute,
-      home: const HomePage(),
+      home: const LoginPage(),
     );
   }
 }

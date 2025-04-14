@@ -50,7 +50,11 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Register')),
+      appBar: AppBar(
+          leading: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Icon(Icons.chevron_left)),
+          title: Text('Register')),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
