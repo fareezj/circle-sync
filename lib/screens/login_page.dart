@@ -1,15 +1,17 @@
+import 'package:circle_sync/providers/app_configs/app_configs_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../route_generator.dart';
 
-class LoginPage extends StatefulWidget {
+class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  ConsumerState<ConsumerStatefulWidget> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _LoginPageState extends ConsumerState<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   String? _errorMessage;
@@ -21,12 +23,13 @@ class _LoginPageState extends State<LoginPage> {
       _isLoading = true;
     });
     try {
+      final secureStorage = ref.read(secureStorageServiceProvider);
       UserCredential userCredential =
           await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text,
         password: _passwordController.text,
       );
-      // Navigate to home page on success
+      await secureStorage.writeData('isLoggedIn', 'true');
       Navigator.pushReplacementNamed(context, RouteGenerator.mainPage);
     } catch (e) {
       setState(() {

@@ -1,3 +1,4 @@
+import 'package:circle_sync/features/circles/circles_page.dart';
 import 'package:circle_sync/screens/map_page.dart';
 import 'package:circle_sync/utils/app_colors.dart';
 import 'package:flutter/material.dart';
@@ -36,7 +37,7 @@ class _MainPageState extends ConsumerState<MainPage> {
   List<Widget> _screenList(BuildContext context, WidgetRef ref) {
     return <Widget>[
       const MapPage(),
-      const Scaffold(),
+      const CirclesPage(),
       const Scaffold(),
     ];
   }

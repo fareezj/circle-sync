@@ -1,3 +1,4 @@
+import 'package:circle_sync/features/circles/circles_page.dart';
 import 'package:circle_sync/screens/login_page.dart';
 import 'package:circle_sync/screens/main_screen.dart';
 import 'package:circle_sync/screens/register_page.dart';
@@ -14,6 +15,7 @@ class RouteGenerator {
   static const String registerPage = '/registerPage';
   static const String mapPage = '/mapPage';
   static const String usersPage = '/usersPage';
+  static const String circlePage = '/circlePage';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -23,6 +25,8 @@ class RouteGenerator {
         return MaterialPageRoute(builder: (_) => const LoginPage());
       case RouteGenerator.registerPage:
         return MaterialPageRoute(builder: (_) => const RegisterPage());
+      case RouteGenerator.circlePage:
+        return MaterialPageRoute(builder: (_) => const CirclesPage());
       case usersPage:
         return MaterialPageRoute(builder: (_) => const UsersScreen());
       case mapPage:
