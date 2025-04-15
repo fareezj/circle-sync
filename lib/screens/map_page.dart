@@ -47,7 +47,8 @@ class _MapPageState extends State<MapPage> {
   Future<void> loadCircle() async {
     Map<String, dynamic> circleList = await _circleService.getCircleInfo();
     var joinedCircles = circleList['joinedCircles'] as List<CircleModel>;
-    _loadCircleDetails(joinedCircles[0].id);
+    _loadCircleDetails(widget.circleId ??
+        (joinedCircles.isNotEmpty ? joinedCircles[0].id : null));
   }
 
   Future<void> _loadCircleDetails(String? circleId) async {

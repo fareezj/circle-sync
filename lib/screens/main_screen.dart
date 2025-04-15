@@ -1,3 +1,4 @@
+import 'package:circle_sync/features/account/account_page.dart';
 import 'package:circle_sync/features/circles/circles_page.dart';
 import 'package:circle_sync/screens/map_page.dart';
 import 'package:circle_sync/utils/app_colors.dart';
@@ -38,7 +39,7 @@ class _MainPageState extends ConsumerState<MainPage> {
     return <Widget>[
       const MapPage(),
       const CirclesPage(),
-      const Scaffold(),
+      const AccountPage(),
     ];
   }
 
