@@ -1,6 +1,8 @@
 import 'package:circle_sync/models/circle_model.dart';
 import 'package:circle_sync/route_generator.dart';
 import 'package:circle_sync/services/circle_service.dart';
+import 'package:circle_sync/services/location_fg.dart';
+import 'package:circle_sync/services/permissions.dart';
 import 'package:circle_sync/widgets/text_widgets.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -16,6 +18,14 @@ class CirclesPage extends ConsumerStatefulWidget {
 
 class _CirclesPageState extends ConsumerState<CirclesPage> {
   CircleService circleService = CircleService();
+  bool _isTracking = false;
+
+  @override
+  void initState() {
+    super.initState();
+    LocationTask.initForegroundTask();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -54,6 +64,11 @@ class _CirclesPageState extends ConsumerState<CirclesPage> {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        ElevatedButton(
+                          onPressed: _toggleTracking,
+                          child: Text(
+                              _isTracking ? 'Stop Tracking' : 'Start Tracking'),
+                        ),
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 16.0),
                           child: TextWidgets.mainSemiBold(
@@ -139,6 +154,23 @@ class _CirclesPageState extends ConsumerState<CirclesPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _toggleTracking() async {
+    if (!_isTracking) {
+      bool hasPermissions = await Permissions.requestLocationPermissions();
+      if (hasPermissions) {
+        await LocationTask.startForegroundTask();
+        setState(() => _isTracking = true);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Location permissions denied')),
+        );
+      }
+    } else {
+      await LocationTask.stopForegroundTask();
+      setState(() => _isTracking = false);
+    }
   }
 
   Future<void> _showCreateCircleDialog(
