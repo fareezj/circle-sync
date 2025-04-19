@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
@@ -64,63 +65,90 @@ Future<void> startCallback() async {
 
 class LocationTaskHandler extends TaskHandler {
   StreamSubscription<Position>? _positionSubscription;
+  List<String> _circleIds = [];
 
   @override
   Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
     print('Foreground task started at $timestamp');
-    try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        print('Location service not enabled');
-        await FlutterForegroundTask.updateService(
-          notificationTitle: 'Location Error',
-          notificationText: 'Please enable location services',
-        );
-        return;
-      }
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission != LocationPermission.whileInUse &&
-            permission != LocationPermission.always) {
-          print('Location permission not granted');
-          await FlutterForegroundTask.updateService(
-            notificationTitle: 'Location Error',
-            notificationText: 'Please grant location permissions',
-          );
-          return;
-        }
-      }
-      _positionSubscription = Geolocator.getPositionStream(
-        locationSettings: LocationSettings(
-          accuracy: LocationAccuracy.high,
-          distanceFilter: 10,
-        ),
-      ).listen((Position position) async {
-        String notificationText =
-            'Lat: ${position.latitude}, Lon: ${position.longitude} at ${DateTime.now().toIso8601String()}';
-        FlutterForegroundTask.updateService(
-          notificationTitle: 'Location Update',
-          notificationText: notificationText,
-        );
-        await FirebaseFirestore.instance
-            .collection('circles')
-            .doc('FAmjpmfKGZDjkYGdih5M')
-            .collection('locations')
-            .doc('EWpnbZ6E3tXQ47dRloQxJ9MHPRh1')
-            .set({
-          'userId': 'EWpnbZ6E3tXQ47dRloQxJ9MHPRh1',
-          'latitude': position.latitude,
-          'longitude': position.longitude,
-          'lastUpdated': FieldValue.serverTimestamp(),
-          'isPaused': false,
-        });
-        print('Location: ${position.latitude}, ${position.longitude}');
-      });
-      print('Location stream initialized');
-    } catch (e) {
-      print('Error initializing location: $e');
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+    // 1. Ensure location services & permissions as before…
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      await FlutterForegroundTask.updateService(
+        notificationTitle: 'Location Error',
+        notificationText: 'Please enable location services',
+      );
+      return;
     }
+
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (permission != LocationPermission.whileInUse &&
+        permission != LocationPermission.always) {
+      await FlutterForegroundTask.updateService(
+        notificationTitle: 'Location Error',
+        notificationText: 'Please grant location permissions',
+      );
+      return;
+    }
+
+    // 2. Fetch all circles this user belongs to (once at startup)
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      print('No authenticated user – cannot fetch circles.');
+      return;
+    }
+    final userId = user.uid;
+
+    final circlesSnap = await firestore
+        .collection('circles')
+        .where('members', arrayContains: userId)
+        .get();
+
+    _circleIds = circlesSnap.docs.map((d) => d.id).toList();
+    print('Joined circles: $_circleIds');
+
+    // 3. Listen for location updates and write to each circle’s sub‑collection
+    _positionSubscription = Geolocator.getPositionStream(
+      locationSettings: LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 10,
+      ),
+    ).listen((position) async {
+      final data = {
+        'userId': userId,
+        'latitude': position.latitude,
+        'longitude': position.longitude,
+        'lastUpdated': FieldValue.serverTimestamp(),
+        'isPaused': false,
+      };
+
+      // Batch all writes into one commit
+      final batch = firestore.batch();
+      for (final circleId in _circleIds) {
+        final locRef = firestore
+            .collection('circles')
+            .doc(circleId)
+            .collection('locations')
+            .doc(userId);
+        batch.set(locRef, data, SetOptions(merge: true));
+      }
+      await batch.commit();
+
+      // Update notification
+      await FlutterForegroundTask.updateService(
+        notificationTitle: 'Location Update',
+        notificationText:
+            'Lat: ${position.latitude}, Lon: ${position.longitude}',
+      );
+
+      print('Batched location update for ${_circleIds.length} circles.');
+    });
+
+    print('Location stream initialized');
   }
 
   @override
