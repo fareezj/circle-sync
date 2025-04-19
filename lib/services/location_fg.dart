@@ -1,4 +1,8 @@
 import 'dart:async';
+import 'dart:ui';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -47,8 +51,14 @@ class LocationTask {
 }
 
 @pragma('vm:entry-point')
-void startCallback() {
-  print('Foreground task callback triggered');
+Future<void> startCallback() async {
+  // 1) Ensure that background plugins can be called
+  DartPluginRegistrant.ensureInitialized();
+  // 2) Bring up the Flutter bindings in this isolate
+  WidgetsFlutterBinding.ensureInitialized();
+  // 3) Initialize Firebase in this isolate
+  await Firebase.initializeApp();
+  // 4) Now register your task handler
   FlutterForegroundTask.setTaskHandler(LocationTaskHandler());
 }
 
@@ -86,13 +96,25 @@ class LocationTaskHandler extends TaskHandler {
           accuracy: LocationAccuracy.high,
           distanceFilter: 10,
         ),
-      ).listen((Position position) {
+      ).listen((Position position) async {
         String notificationText =
             'Lat: ${position.latitude}, Lon: ${position.longitude} at ${DateTime.now().toIso8601String()}';
         FlutterForegroundTask.updateService(
           notificationTitle: 'Location Update',
           notificationText: notificationText,
         );
+        await FirebaseFirestore.instance
+            .collection('circles')
+            .doc('FAmjpmfKGZDjkYGdih5M')
+            .collection('locations')
+            .doc('EWpnbZ6E3tXQ47dRloQxJ9MHPRh1')
+            .set({
+          'userId': 'EWpnbZ6E3tXQ47dRloQxJ9MHPRh1',
+          'latitude': position.latitude,
+          'longitude': position.longitude,
+          'lastUpdated': FieldValue.serverTimestamp(),
+          'isPaused': false,
+        });
         print('Location: ${position.latitude}, ${position.longitude}');
       });
       print('Location stream initialized');
