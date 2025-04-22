@@ -28,7 +28,7 @@ class RouteGenerator {
       case RouteGenerator.circlePage:
         return MaterialPageRoute(builder: (_) => const CirclesPage());
       case usersPage:
-        return MaterialPageRoute(builder: (_) => const UsersScreen());
+        return MaterialPageRoute(builder: (_) => const CirclesPage());
       case mapPage:
         final args = settings.arguments as Map<String, dynamic>?;
         return MaterialPageRoute(

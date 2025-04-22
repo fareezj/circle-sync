@@ -1,13 +1,12 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:circle_sync/models/circle_model.dart';
-import 'package:circle_sync/route_generator.dart';
 import 'package:circle_sync/services/circle_service.dart';
 import 'package:circle_sync/services/location_fg.dart';
 import 'package:circle_sync/services/permissions.dart';
 import 'package:circle_sync/widgets/text_widgets.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:circle_sync/route_generator.dart';
 
 class CirclesPage extends ConsumerStatefulWidget {
   const CirclesPage({super.key});
@@ -17,12 +16,14 @@ class CirclesPage extends ConsumerStatefulWidget {
 }
 
 class _CirclesPageState extends ConsumerState<CirclesPage> {
-  CircleService circleService = CircleService();
+  final CircleService circleService = CircleService();
   bool _isTracking = false;
+  late final SupabaseClient _supabase;
 
   @override
   void initState() {
     super.initState();
+    _supabase = Supabase.instance.client;
     LocationTask.initForegroundTask();
   }
 
@@ -31,12 +32,12 @@ class _CirclesPageState extends ConsumerState<CirclesPage> {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-          if (currentUserId != null) {
-            _showCreateCircleDialog(context, currentUserId);
+          final user = _supabase.auth.currentUser;
+          if (user != null) {
+            _showCreateCircleDialog(context, user.id);
           }
         },
-        child: Icon(Icons.add),
+        child: const Icon(Icons.add),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -70,7 +71,7 @@ class _CirclesPageState extends ConsumerState<CirclesPage> {
                               _isTracking ? 'Stop Tracking' : 'Start Tracking'),
                         ),
                         Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 16.0),
+                          padding: EdgeInsets.symmetric(vertical: 16.0),
                           child: TextWidgets.mainSemiBold(
                               title: 'Joined Circles', fontSize: 18.0),
                         ),
@@ -91,7 +92,7 @@ class _CirclesPageState extends ConsumerState<CirclesPage> {
                               },
                             )),
                         Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 16.0),
+                          padding: EdgeInsets.symmetric(vertical: 16.0),
                           child: TextWidgets.mainSemiBold(
                               title: 'Circle Invitations', fontSize: 18.0),
                         ),
@@ -101,11 +102,10 @@ class _CirclesPageState extends ConsumerState<CirclesPage> {
                             child: TextWidgets.mainSemiBold(
                                 title: 'You have no pending invitations'),
                           ),
-                        ...invitations.map((invitation) {
-                          final circle = invitation['circle'] as CircleModel;
-                          final invitedBy = invitation['invitedBy'] as String;
-                          final invitationId =
-                              invitation['invitationId'] as String;
+                        ...invitations.map((inv) {
+                          final circle = inv['circle'] as CircleModel;
+                          final invitedBy = inv['invitedBy'] as String;
+                          final invitationId = inv['invitationId'] as String;
                           return ListTile(
                             title: Text(circle.name),
                             subtitle: Text('Invited by: $invitedBy'),
@@ -116,27 +116,22 @@ class _CirclesPageState extends ConsumerState<CirclesPage> {
                                   icon: const Icon(Icons.check,
                                       color: Colors.green),
                                   onPressed: () async {
-                                    final currentUserId =
-                                        FirebaseAuth.instance.currentUser?.uid;
-                                    if (currentUserId != null) {
-                                      final circleService = CircleService();
-                                      await circleService.acceptInvitation(
-                                          invitationId, currentUserId);
-                                      Navigator.pushNamed(
-                                        context,
-                                        RouteGenerator.mapPage,
-                                        arguments: {'circleId': circle.id},
-                                      );
-                                    }
+                                    await circleService
+                                        .acceptInvitation(invitationId);
+                                    Navigator.pushNamed(
+                                      context,
+                                      RouteGenerator.mapPage,
+                                      arguments: {'circleId': circle.id},
+                                    );
                                   },
                                 ),
                                 IconButton(
                                   icon: const Icon(Icons.close,
                                       color: Colors.red),
                                   onPressed: () async {
-                                    final circleService = CircleService();
                                     await circleService
                                         .declineInvitation(invitationId);
+                                    setState(() {});
                                   },
                                 ),
                               ],
@@ -175,96 +170,90 @@ class _CirclesPageState extends ConsumerState<CirclesPage> {
 
   Future<void> _showCreateCircleDialog(
       BuildContext context, String userId) async {
-    final TextEditingController nameController = TextEditingController();
+    final nameController = TextEditingController();
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Create a Circle'),
-          content: TextField(
-            controller: nameController,
-            decoration: const InputDecoration(
-              labelText: 'Circle Name',
-              hintText: 'Enter a name for your circle',
-            ),
+      builder: (_) => AlertDialog(
+        title: const Text('Create a Circle'),
+        content: TextField(
+          controller: nameController,
+          decoration: const InputDecoration(
+            labelText: 'Circle Name',
+            hintText: 'Enter a name for your circle',
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () async {
-                final circleName = nameController.text.trim();
-                if (circleName.isNotEmpty) {
-                  try {
-                    final circleService = CircleService();
-                    final circleId =
-                        await circleService.createCircle(circleName, []);
-                    Navigator.of(context).pop();
-                    Navigator.pushNamed(
-                      context,
-                      RouteGenerator.mapPage,
-                      arguments: {'circleId': circleId},
-                    );
-                  } catch (e) {
-                    debugPrint('Error creating circle: $e');
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Failed to create circle.')),
-                    );
-                  }
-                }
-              },
-              child: const Text('Create'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<void> _showCircleOptionsDialog(
-      BuildContext context, String circleId, String? circleName) async {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Circle: ${circleName ?? "Unknown"}'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final circleName = nameController.text.trim();
+              if (circleName.isNotEmpty) {
+                try {
+                  final circleId =
+                      await circleService.createCircle(circleName, []);
+                  Navigator.pop(context);
                   Navigator.pushNamed(
                     context,
                     RouteGenerator.mapPage,
                     arguments: {'circleId': circleId},
                   );
-                },
-                child: const Text('Go to Map'),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-                  if (currentUserId != null) {
-                    await FirebaseFirestore.instance
-                        .collection('circles')
-                        .doc(circleId)
-                        .update({
-                      'members': FieldValue.arrayRemove([currentUserId]),
-                    });
-                    Navigator.of(context).pop();
-                  }
-                },
-                child: const Text('Leave Circle'),
-              ),
-            ],
+                } catch (e) {
+                  debugPrint('Error creating circle: $e');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Failed to create circle.')),
+                  );
+                }
+              }
+            },
+            child: const Text('Create'),
           ),
-        );
-      },
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showCircleOptionsDialog(
+      BuildContext context, String circleId, String circleName) async {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('Circle: $circleName'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(
+                  context,
+                  RouteGenerator.mapPage,
+                  arguments: {'circleId': circleId},
+                );
+              },
+              child: const Text('Go to Map'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final user = _supabase.auth.currentUser;
+                if (user != null) {
+                  // Remove the member from the circle
+                  final circle = await circleService.getCircle(circleId);
+                  final updatedMembers = List<String>.from(circle.members)
+                    ..remove(user.id);
+                  await _supabase.from('circles').update(
+                      {'members': updatedMembers}).eq('circle_id', circleId);
+                  Navigator.pop(context);
+                  setState(() {});
+                }
+              },
+              child: const Text('Leave Circle'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

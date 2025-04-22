@@ -2,14 +2,19 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Your message when requesting foreground location</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Your message when requesting background location</string>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
 	<string>com.pravera.flutter_foreground_task.refresh</string>
 	</array>
 	<key>UIBackgroundModes</key>
 	<array>
-	<string>fetch</string>
 	<string>location</string>
+	<string>remote-notification</string>
+	<string>fetch</string>
 	</array>
 	<key>NSLocationTemporaryUsageDescriptionDictionary</key>
 	<dict>

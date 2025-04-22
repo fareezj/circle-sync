@@ -1,28 +1,30 @@
 import 'dart:async';
 import 'dart:math';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:uuid/uuid.dart';
 
 class LocationService {
+  final SupabaseClient _supabase = Supabase.instance.client;
   StreamSubscription<Position>? _positionStreamSubscription;
-  StreamSubscription? _receivePortSubscription;
+  StreamSubscription<List<Map<String, dynamic>>>? _realtimeSubscription;
   bool _useSimulation = true;
-  bool _isLocationSharing = true; // Track whether location sharing is active
+  bool _isLocationSharing = true;
 
-  // Getter to expose the sharing state to MapPage
+  /// Expose sharing state
   bool get isLocationSharing => _isLocationSharing;
 
+  /// Initialize a single static location
   Future<void> initStaticLocation({
     required Function(LatLng) onLocationUpdate,
     required Function(List<LatLng>) onTrackingUpdate,
   }) async {
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) return;
+    bool enabled = await Geolocator.isLocationServiceEnabled();
+    if (!enabled) return;
 
-    LocationPermission permission = await Geolocator.checkPermission();
+    var permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
       permission = await Geolocator.requestPermission();
@@ -33,9 +35,9 @@ class LocationService {
     LatLng current;
     List<LatLng> trackingPoints;
     if (!_useSimulation) {
-      Position position = await Geolocator.getCurrentPosition(
+      var pos = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high);
-      current = LatLng(position.latitude, position.longitude);
+      current = LatLng(pos.latitude, pos.longitude);
       trackingPoints = [current];
     } else {
       current = LatLng(37.7749, -122.4194);
@@ -46,13 +48,14 @@ class LocationService {
     onTrackingUpdate(trackingPoints);
   }
 
+  /// Initialize starting location, destination, and route
   Future<void> initInitialLocationAndRoute({
     required Function(LatLng, LatLng, List<LatLng>) onLocationAndRouteUpdate,
   }) async {
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) return;
+    bool enabled = await Geolocator.isLocationServiceEnabled();
+    if (!enabled) return;
 
-    LocationPermission permission = await Geolocator.checkPermission();
+    var permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
       permission = await Geolocator.requestPermission();
@@ -63,10 +66,10 @@ class LocationService {
     LatLng current;
     LatLng destination;
     if (!_useSimulation) {
-      Position position = await Geolocator.getCurrentPosition(
+      var pos = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high);
-      current = LatLng(position.latitude, position.longitude);
-      destination = LatLng(position.latitude + 0.01, position.longitude + 0.01);
+      current = LatLng(pos.latitude, pos.longitude);
+      destination = LatLng(pos.latitude + 0.01, pos.longitude + 0.01);
     } else {
       current = LatLng(37.7749, -122.4194);
       destination = LatLng(37.7849, -122.4094);
@@ -75,6 +78,7 @@ class LocationService {
     onLocationAndRouteUpdate(current, destination, [current]);
   }
 
+  /// Simulated circular movement
   Stream<Position> _simulatePositionStream() async* {
     double lat = 37.7749;
     double lng = -122.4194;
@@ -84,11 +88,8 @@ class LocationService {
       await Future.delayed(const Duration(seconds: 2));
       step++;
       double angle = step * 0.1;
-      double deltaLat = 0.001 * cos(angle);
-      double deltaLng = 0.001 * sin(angle);
-
-      lat += deltaLat;
-      lng += deltaLng;
+      lat += 0.001 * cos(angle);
+      lng += 0.001 * sin(angle);
 
       yield Position(
         latitude: lat,
@@ -105,147 +106,137 @@ class LocationService {
     }
   }
 
+  /// Subscribe to user position updates and sync to Supabase
   Future<void> subscribeToLocationUpdates({
     required String circleId,
     required bool useSimulation,
     required Function(LatLng, List<LatLng>) onLocationUpdate,
-    LatLng? destinationLocation,
   }) async {
+    print('here1');
     _useSimulation = useSimulation;
-    _positionStreamSubscription?.cancel();
+    await _positionStreamSubscription?.cancel();
 
-    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-    if (currentUserId == null) return;
+    // Ensure current user
+    final user = _supabase.auth.currentUser;
+    if (user == null) return;
+    final uid = user.id;
 
-    if (_useSimulation) {
-      _positionStreamSubscription =
-          _simulatePositionStream().listen((Position position) async {
-        LatLng updatedLocation = LatLng(position.latitude, position.longitude);
+    Stream<Position> posStream = _useSimulation
+        ? _simulatePositionStream()
+        : Geolocator.getPositionStream(
+            locationSettings: const LocationSettings(
+              accuracy: LocationAccuracy.best,
+              distanceFilter: 10,
+            ),
+          );
 
-        // Always update the map locally
-        onLocationUpdate(updatedLocation, [updatedLocation]);
+    _positionStreamSubscription = posStream.listen((pos) async {
+      final updated = LatLng(pos.latitude, pos.longitude);
+      onLocationUpdate(updated, [updated]);
 
-        // Only update Firestore if location sharing is active
-        if (_isLocationSharing) {
-          await updateUserLocation(circleId, currentUserId,
-              updatedLocation.latitude, updatedLocation.longitude, false);
-        }
-      });
-    } else {
-      const locationSettings = LocationSettings(
-        accuracy: LocationAccuracy.best,
-        distanceFilter: 10,
-      );
-      _positionStreamSubscription =
-          Geolocator.getPositionStream(locationSettings: locationSettings)
-              .listen((Position position) async {
-        LatLng updatedLocation = LatLng(position.latitude, position.longitude);
+      if (_isLocationSharing) {
+        await _upsertLocation(circleId, uid, updated, false);
+      }
+    });
+  }
 
-        // Always update the map locally
-        onLocationUpdate(updatedLocation, [updatedLocation]);
-
-        // Only update Firestore if location sharing is active
-        if (_isLocationSharing) {
-          await updateUserLocation(circleId, currentUserId,
-              updatedLocation.latitude, updatedLocation.longitude, false);
-        }
-      });
+  /// Upsert a location row in Supabase
+  Future<void> _upsertLocation(
+    String circleId,
+    String userId,
+    LatLng loc,
+    bool isPaused,
+  ) async {
+    try {
+      print('updating location');
+      await _supabase.from('locations').upsert(
+        {
+          'location_id': Uuid().v4(),
+          'created_at': DateTime.now().toIso8601String(),
+          'circle_id': circleId,
+          'user_id': userId,
+          'lat': loc.latitude,
+          'lng': loc.longitude,
+          'is_paused': isPaused,
+        },
+        onConflict: 'circle_id, user_id',
+      ).select();
+    } on PostgrestException catch (e) {
+      print('Location upsert error: ${e.message}');
     }
   }
 
-  Future<void> updateUserLocation(String circleId, String userId, double lat,
-      double lng, bool isPaused) async {
-    await FirebaseFirestore.instance
-        .collection('circles')
-        .doc(circleId)
-        .collection('locations')
-        .doc(userId)
-        .set({
-      'userId': userId,
-      'latitude': lat,
-      'longitude': lng,
-      'lastUpdated': FieldValue.serverTimestamp(),
-      'isPaused': isPaused, // Indicate whether the user has paused sharing
-    });
-  }
-
-  Stream<QuerySnapshot> getCircleLocations(String circleId) {
-    return FirebaseFirestore.instance
-        .collection('circles')
-        .doc(circleId)
-        .collection('locations')
-        .snapshots();
-  }
-
+  /// Stream other members’ locations in real time
   void subscribeToOtherUsersLocations({
     required String circleId,
-    required String currentUserId,
     required Function(Map<String, LatLng>) onLocationsUpdate,
   }) {
-    getCircleLocations(circleId).listen((snapshot) {
-      final updatedLocations = <String, LatLng>{};
+    _realtimeSubscription = _supabase
+        .from('locations:circle_id=eq.$circleId')
+        .stream(primaryKey: ['user_id']).listen((rows) {
+      final Map<String, LatLng> updated = {};
+      final user = _supabase.auth.currentUser;
+      final uid = user?.id;
 
-      for (final doc in snapshot.docs) {
-        final userId = doc['userId'] as String;
-        if (userId == currentUserId) continue;
-
-        final lat = doc['latitude'] as double;
-        final lng = doc['longitude'] as double;
-        updatedLocations[userId] = LatLng(lat, lng);
+      for (var row in rows) {
+        final rowUid = row['user_id'] as String;
+        if (rowUid == uid) continue;
+        updated[rowUid] = LatLng(
+          (row['lat'] as num).toDouble(),
+          (row['lng'] as num).toDouble(),
+        );
       }
-
-      onLocationsUpdate(updatedLocations);
+      onLocationsUpdate(updated);
     });
   }
 
-  // Renamed from cancelLocationSharing to pauseLocationSharing for clarity
-  void pauseLocationSharing(String circleId, LatLng? lastKnownLocation) async {
+  /// Pause sharing: mark last known and pause
+  Future<void> pauseLocationSharing(
+    String circleId,
+    LatLng? lastKnown,
+  ) async {
     _isLocationSharing = false;
-
-    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-    if (currentUserId == null || lastKnownLocation == null) return;
-
-    // Update Firestore with the last known location and set isPaused to true
-    await updateUserLocation(circleId, currentUserId,
-        lastKnownLocation.latitude, lastKnownLocation.longitude, true);
+    final user = _supabase.auth.currentUser;
+    if (user == null || lastKnown == null) return;
+    await _upsertLocation(circleId, user.id, lastKnown, true);
   }
 
-  void resumeLocationSharing(String circleId, LatLng? lastKnownLocation) async {
+  /// Resume sharing
+  Future<void> resumeLocationSharing(
+    String circleId,
+    LatLng? lastKnown,
+  ) async {
     _isLocationSharing = true;
-
-    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-    if (currentUserId == null || lastKnownLocation == null) return;
-
-    // Update Firestore with the last known location and set isPaused to false
-    await updateUserLocation(circleId, currentUserId,
-        lastKnownLocation.latitude, lastKnownLocation.longitude, false);
+    final user = _supabase.auth.currentUser;
+    if (user == null || lastKnown == null) return;
+    await _upsertLocation(circleId, user.id, lastKnown, false);
   }
 
+  /// Foreground task start
   Future<void> startForegroundTask() async {
     if (await FlutterForegroundTask.isRunningService) return;
     await FlutterForegroundTask.startService(
       notificationTitle: 'Circle Sync Running',
-      notificationText: 'Sharing your location with your circle',
+      notificationText: 'Sharing your location',
       callback: startForegroundTask,
     );
-
-    final receivePort = FlutterForegroundTask.receivePort;
-    if (receivePort != null) {
-      _receivePortSubscription = receivePort.listen((data) {
-        if (data is Map<String, dynamic>) {
-          // Handle foreground task updates if needed
-        }
+    final port = FlutterForegroundTask.receivePort;
+    if (port != null) {
+      port.listen((data) {
+        // handle background updates if needed
       });
     }
   }
 
+  /// Stop foreground task
   Future<void> stopForegroundTask() async {
     await FlutterForegroundTask.stopService();
   }
 
+  /// Cleanup
   void dispose() {
     _positionStreamSubscription?.cancel();
-    _receivePortSubscription?.cancel();
+    _realtimeSubscription?.cancel();
     stopForegroundTask();
   }
 }

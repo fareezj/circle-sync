@@ -269,13 +269,14 @@ class _MapPageState extends State<MapPage> {
   }
 
   void _subscribeToLocationUpdates() {
+    print('here2');
+
     if (_currentCircleId == null) return;
 
     _locationService.subscribeToLocationUpdates(
       circleId: _currentCircleId!,
       useSimulation: _useSimulation,
       onLocationUpdate: onLocationUpdate,
-      destinationLocation: _mapState.destinationLocation,
     );
   }
 
@@ -287,7 +288,6 @@ class _MapPageState extends State<MapPage> {
 
     _locationService.subscribeToOtherUsersLocations(
       circleId: _currentCircleId!,
-      currentUserId: currentUserId,
       onLocationsUpdate: (updatedLocations) {
         setState(() {
           _mapState = _mapState.copyWith(otherUsersLocations: updatedLocations);

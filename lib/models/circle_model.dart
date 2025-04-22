@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class CircleModel {
   final String id;
   final String name;
@@ -15,25 +13,26 @@ class CircleModel {
     required this.members,
   });
 
-  // Convert CircleModel to Firestore map
+  /// Converts this model into a Map suitable for inserting/updating Supabase.
   Map<String, dynamic> toMap() {
     return {
+      'circle_id': id,
       'name': name,
-      'createdBy': createdBy,
-      'dateCreated': Timestamp.fromDate(dateCreated),
+      'created_by': createdBy,
+      'date_created': dateCreated.toUtc().toIso8601String(),
       'members': members,
     };
   }
 
-  // Create CircleModel from Firestore document
-  factory CircleModel.fromDocument(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  /// Constructs a CircleModel from a Map<String, dynamic>,
+  /// e.g. a row returned by Supabase (.select()).
+  factory CircleModel.fromMap(Map<String, dynamic> map) {
     return CircleModel(
-      id: doc.id,
-      name: data['name'] ?? '',
-      createdBy: data['createdBy'] ?? '',
-      dateCreated: (data['dateCreated'] as Timestamp).toDate(),
-      members: List<String>.from(data['members'] ?? []),
+      id: map['circle_id'] as String,
+      name: map['name'] as String,
+      createdBy: map['created_by'] as String,
+      dateCreated: DateTime.parse(map['date_created'] as String),
+      members: List<String>.from(map['members'] as List<dynamic>),
     );
   }
 }

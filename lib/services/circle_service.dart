@@ -1,135 +1,178 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:circle_sync/models/circle_model.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 class CircleService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final SupabaseClient _supabase = Supabase.instance.client;
 
+  /// 1. Create a new circle, return its ID
   Future<String> createCircle(String name, List<String> memberIds) async {
-    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-    if (currentUserId == null) {
-      throw Exception('User not authenticated');
+    final user = _supabase.auth.currentUser;
+    if (user == null) throw Exception('User not authenticated');
+
+    // Insert and get back the new record
+    final rows = await _supabase.from('circles').insert({
+      'name': name,
+      'created_by': user.id,
+      'date_created': DateTime.now().toIso8601String(),
+      'members': [user.id, ...memberIds],
+    }).select(); // returns List<dynamic> :contentReference[oaicite:3]{index=3}
+
+    // rows is List<dynamic>, so cast to List<Map>
+    if (rows.isEmpty) {
+      throw Exception('Failed to create circle');
     }
-
-    final circleRef = _firestore.collection('circles').doc();
-    final newCircle = CircleModel(
-      id: circleRef.id,
-      name: name,
-      createdBy: currentUserId,
-      dateCreated: DateTime.now(),
-      members: [currentUserId, ...memberIds],
-    );
-
-    await circleRef.set(newCircle.toMap());
-
-    return circleRef.id;
+    final circleId = (rows.first)['circle_id'] as String;
+    return circleId;
   }
 
+  /// 2. Fetch one circle by ID
   Future<CircleModel> getCircle(String circleId) async {
-    final doc = await _firestore.collection('circles').doc(circleId).get();
-    if (!doc.exists) {
-      throw Exception('Circle not found');
+    try {
+      final row = await _supabase
+          .from('circles')
+          .select()
+          .eq('circle_id', circleId)
+          .single(); // returns Map<String, dynamic> :contentReference[oaicite:4]{index=4}
+
+      return CircleModel.fromMap(row);
+    } on PostgrestException catch (e) {
+      throw Exception(
+          'Failed to load circle: ${e.message}'); // thrown on error :contentReference[oaicite:5]{index=5}
     }
-    return CircleModel.fromDocument(doc);
   }
 
-  Future<void> addMember(String circleId, String userId) async {
-    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-    if (currentUserId == null) {
-      throw Exception('User not authenticated');
+  /// 3. Send an invitation
+  Future<void> addMember(String circleId, String inviteeId) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) throw Exception('User not authenticated');
+
+    try {
+      await _supabase.from('circle_invitations').insert({
+        'circle_id': circleId,
+        'user_id': inviteeId,
+        'invited_by': user.id,
+        'status': 'pending',
+      });
+      // insert throws on error; no need to check .error :contentReference[oaicite:6]{index=6}
+    } catch (e) {
+      throw Exception('Failed to send invitation: $e');
     }
-
-    // Create an invitation in the circleInvitations collection
-    final invitationRef = _firestore.collection('circleInvitations').doc();
-    await invitationRef.set({
-      'circleId': circleId,
-      'userId': userId,
-      'invitedBy': currentUserId,
-      'status': 'pending',
-      'invitedAt': FieldValue.serverTimestamp(),
-    });
   }
 
-  Future<void> acceptInvitation(String invitationId, String userId) async {
-    // Update the invitation status
-    await _firestore.collection('circleInvitations').doc(invitationId).update({
-      'status': 'accepted',
-      'respondedAt': FieldValue.serverTimestamp(),
-    });
+  /// 4. Accept an invitation
+  Future<void> acceptInvitation(String invitationId) async {
+    try {
+      // a) Mark invitation accepted & return updated row
+      final updated = await _supabase
+          .from('circle_invitations')
+          .update({
+            'status': 'accepted',
+            'responded_at': DateTime.now().toUtc().toIso8601String(),
+          })
+          .eq('invitation_id', invitationId)
+          .single(); // Map<String,dynamic> :contentReference[oaicite:7]{index=7}
 
-    // Get the circleId from the invitation
-    final invitationDoc = await _firestore
-        .collection('circleInvitations')
-        .doc(invitationId)
-        .get();
-    final circleId = invitationDoc.data()!['circleId'] as String;
+      final circleId = (updated)['circle_id'] as String;
+      final userId = updated['user_id'] as String;
 
-    // Add the user to the circle's members list
-    await _firestore.collection('circles').doc(circleId).update({
-      'members': FieldValue.arrayUnion([userId]),
-    });
+      // b) Fetch current members array
+      final circleRow = await _supabase
+          .from('circles')
+          .select('members')
+          .eq('circle_id', circleId)
+          .single();
+
+      final members = List<String>.from((circleRow)['members']);
+
+      // c) Append if missing
+      if (!members.contains(userId)) {
+        members.add(userId);
+        await _supabase
+            .from('circles')
+            .update({'members': members}).eq('circle_id', circleId);
+      }
+    } catch (e) {
+      throw Exception('Failed to accept invitation: $e');
+    }
   }
 
+  /// 5. Decline an invitation
   Future<void> declineInvitation(String invitationId) async {
-    await _firestore.collection('circleInvitations').doc(invitationId).update({
-      'status': 'declined',
-      'respondedAt': FieldValue.serverTimestamp(),
-    });
+    try {
+      await _supabase.from('circle_invitations').update({
+        'status': 'declined',
+        'responded_at': DateTime.now().toUtc().toIso8601String(),
+      }).eq('invitation_id', invitationId);
+    } catch (e) {
+      throw Exception('Failed to decline invitation: $e');
+    }
   }
 
+  /// 6. List circles the user belongs to
   Future<List<CircleModel>> getUserCircles(String userId) async {
-    final querySnapshot = await _firestore
-        .collection('circles')
-        .where('members', arrayContains: userId)
-        .get();
+    List<Map<String, dynamic>> rows = [];
+    // Returns List<dynamic>
+    print('Getting user circle: $userId');
 
-    return querySnapshot.docs
-        .map((doc) => CircleModel.fromDocument(doc))
+    try {
+      rows = await _supabase.from('circles').select();
+
+      print(rows);
+    } catch (e) {
+      print(e);
+    }
+
+    return (rows as List)
+        .map((e) => CircleModel.fromMap(e as Map<String, dynamic>))
         .toList();
   }
 
+  /// 7. List pending invitations for the user
   Future<List<Map<String, dynamic>>> getInvitations(String userId) async {
-    final invitations = await _firestore
-        .collection('circleInvitations')
-        .where('userId', isEqualTo: userId)
-        .where('status', isEqualTo: 'pending')
-        .get();
+    final invites = await _supabase
+        .from('circle_invitations')
+        .select()
+        .eq('user_id', userId)
+        .eq('status', 'pending'); // List<dynamic>
 
-    final List<Map<String, dynamic>> invitationDetails = [];
-    for (var doc in invitations.docs) {
-      final data = doc.data();
-      final circleId = data['circleId'] as String;
-      final circleDoc =
-          await _firestore.collection('circles').doc(circleId).get();
-      if (circleDoc.exists) {
-        final circle = CircleModel.fromDocument(circleDoc);
-        invitationDetails.add({
-          'invitationId': doc.id,
-          'circle': circle,
-          'invitedBy': data['invitedBy'],
-          'invitedAt': (data['invitedAt'] as Timestamp?)?.toDate(),
-        });
-      }
+    final details = <Map<String, dynamic>>[];
+    for (final inv in invites as List) {
+      final mapInv = inv as Map<String, dynamic>;
+      final circleId = mapInv['circle_id'] as String;
+      final circRow = await _supabase
+          .from('circles')
+          .select()
+          .eq('circle_id', circleId)
+          .single(); // Map<String,dynamic>
+
+      details.add({
+        'invitationId': mapInv['invitation_id'],
+        'circle': CircleModel.fromMap(circRow),
+        'invitedBy': mapInv['invited_by'],
+        'invitedAt': mapInv['invited_at'],
+      });
     }
-    return invitationDetails;
+    return details;
   }
 
+  /// 8. Combined info
   Future<Map<String, dynamic>> getCircleInfo() async {
-    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-    if (currentUserId == null) {
+    final user = _supabase.auth.currentUser;
+
+    print('Getting user circle info');
+    print(user);
+
+    if (user == null) {
       return {
         'joinedCircles': <CircleModel>[],
         'invitations': <Map<String, dynamic>>[],
       };
     }
-
-    final circleService = CircleService();
-    final joinedCircles = await circleService.getUserCircles(currentUserId);
-    final invitations = await circleService.getInvitations(currentUserId);
-
+    final circles = await getUserCircles(user.id);
+    final invites = await getInvitations(user.id);
     return {
-      'joinedCircles': joinedCircles,
-      'invitations': invitations,
+      'joinedCircles': circles,
+      'invitations': invites,
     };
   }
 }
