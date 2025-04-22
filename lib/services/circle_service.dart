@@ -59,50 +59,49 @@ class CircleService {
     }
   }
 
-  /// 4. Accept an invitation
   Future<void> acceptInvitation(String invitationId) async {
-    try {
-      // a) Mark invitation accepted & return updated row
-      final updated = await _supabase
-          .from('circle_invitations')
-          .update({
-            'status': 'accepted',
-            'responded_at': DateTime.now().toUtc().toIso8601String(),
-          })
-          .eq('invitation_id', invitationId)
-          .single(); // Map<String,dynamic> :contentReference[oaicite:7]{index=7}
+    final user = _supabase.auth.currentUser;
+    if (user == null) throw Exception('Not signed in');
 
-      final circleId = (updated)['circle_id'] as String;
-      final userId = updated['user_id'] as String;
+    // 1) Mark the invitation accepted and grab its circle_id & user_id
+    final invite = await _supabase
+        .from('circle_invitations')
+        .update({'status': 'accepted'})
+        .eq('invitation_id', invitationId)
+        .select('circle_id,user_id')
+        .single();
+    final circleId = invite['circle_id'] as String;
+    final userId = invite['user_id'] as String;
 
-      // b) Fetch current members array
-      final circleRow = await _supabase
-          .from('circles')
-          .select('members')
-          .eq('circle_id', circleId)
-          .single();
+    // 2) Fetch the current members array
+    final circleRow = await _supabase
+        .from('circles')
+        .select('members')
+        .eq('circle_id', circleId)
+        .single();
+    final members = List<String>.from(circleRow['members'] as List);
 
-      final members = List<String>.from((circleRow)['members']);
+    // 3) Only append if they’re not already in the list
+    if (!members.contains(userId)) {
+      members.add(userId);
 
-      // c) Append if missing
-      if (!members.contains(userId)) {
-        members.add(userId);
-        await _supabase
-            .from('circles')
-            .update({'members': members}).eq('circle_id', circleId);
-      }
-    } catch (e) {
-      throw Exception('Failed to accept invitation: $e');
+      // 4) Upsert on the primary key, merging only the members field
+      await _supabase.from('circles').upsert(
+        {
+          'circle_id': circleId,
+          'members': members,
+        },
+        onConflict: 'circle_id', // use your PK here
+      ).select(); // optional: returns the updated row
     }
   }
 
   /// 5. Decline an invitation
   Future<void> declineInvitation(String invitationId) async {
     try {
-      await _supabase.from('circle_invitations').update({
-        'status': 'declined',
-        'responded_at': DateTime.now().toUtc().toIso8601String(),
-      }).eq('invitation_id', invitationId);
+      await _supabase
+          .from('circle_invitations')
+          .update({'status': 'declined'}).eq('invitation_id', invitationId);
     } catch (e) {
       throw Exception('Failed to decline invitation: $e');
     }
