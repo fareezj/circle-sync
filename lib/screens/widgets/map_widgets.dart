@@ -1,127 +1,91 @@
-import 'package:circle_sync/models/map_state_model.dart';
+// map_widgets.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:circle_sync/models/map_state_model.dart';
 
 class MapWidget extends StatelessWidget {
   final MapController mapController;
   final MapState mapState;
   final bool hasCircle;
   final VoidCallback onCurrentLocationTap;
-  final Function(String, LatLng) onOtherUserTap;
+  final void Function(String userId, LatLng location) onOtherUserTap;
 
   const MapWidget({
-    super.key,
     required this.mapController,
     required this.mapState,
     required this.hasCircle,
     required this.onCurrentLocationTap,
     required this.onOtherUserTap,
+    super.key,
   });
 
   @override
   Widget build(BuildContext context) {
+    // Rebuild markers anew on every build:
+    final markers = <Marker>[];
+
+    // Current user:
+    if (mapState.currentLocation != null) {
+      markers.add(
+        Marker(
+          point: mapState.currentLocation!,
+          width: 40,
+          height: 40,
+          child: GestureDetector(
+            onTap: onCurrentLocationTap,
+            child: Icon(Icons.my_location, color: Colors.blue, size: 32),
+          ),
+        ),
+      );
+    }
+
+    // Other members:
+    mapState.otherUsersLocations.forEach((userId, loc) {
+      markers.add(
+        Marker(
+          point: loc,
+          width: 36,
+          height: 36,
+          child: GestureDetector(
+            onTap: () => onOtherUserTap(userId, loc),
+            child: Icon(Icons.person_pin_circle,
+                color: Colors.redAccent, size: 30),
+          ),
+        ),
+      );
+    });
+
+    // Polylines if any:
+    final polylines = <Polyline>[];
+    if (mapState.osrmRoutePoints.isNotEmpty) {
+      polylines.add(Polyline(
+        points: mapState.osrmRoutePoints,
+        strokeWidth: 4,
+      ));
+    }
+    if (mapState.trackingPoints.isNotEmpty) {
+      polylines.add(Polyline(
+        points: mapState.trackingPoints,
+        strokeWidth: 2,
+      ));
+    }
+
     return FlutterMap(
       mapController: mapController,
       options: MapOptions(
+        // Use `center` not `initialCenter` so mapController.move() works reliably
         initialCenter: mapState.currentLocation ?? LatLng(0, 0),
-        initialZoom: 13.0,
+        initialZoom: 13,
       ),
       children: [
         TileLayer(
-          urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-          userAgentPackageName: 'com.example.yourapp',
+          // Switch to the single‐server URL to avoid OSM subdomain warnings
+          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
         ),
-        if (hasCircle && mapState.osrmRoutePoints.isNotEmpty)
-          PolylineLayer(
-            polylines: [
-              Polyline(
-                points: mapState.osrmRoutePoints,
-                strokeWidth: 4.0,
-                color: Colors.blue,
-              ),
-            ],
-          ),
-        if (hasCircle && mapState.trackingPoints.isNotEmpty)
-          PolylineLayer(
-            polylines: [
-              Polyline(
-                points: mapState.trackingPoints,
-                strokeWidth: 3.0,
-                color: Colors.orange,
-              ),
-            ],
-          ),
-        if (hasCircle)
-          MarkerLayer(
-            markers: mapState.otherUsersLocations.entries.map((entry) {
-              return Marker(
-                point: entry.value,
-                width: 40,
-                height: 40,
-                child: GestureDetector(
-                  onTap: () => onOtherUserTap(entry.key, entry.value),
-                  child: Stack(
-                    children: [
-                      const Icon(Icons.person_pin_circle,
-                          color: Colors.red, size: 40),
-                      Positioned(
-                        right: 0,
-                        bottom: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            color: Colors.blue,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(Icons.info_outline,
-                              color: Colors.white, size: 14),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-        MarkerLayer(
-          markers: [
-            if (mapState.currentLocation != null)
-              Marker(
-                point: mapState.currentLocation!,
-                width: 40,
-                height: 40,
-                child: GestureDetector(
-                  onTap: onCurrentLocationTap,
-                  child: Stack(
-                    children: [
-                      const Icon(Icons.my_location,
-                          color: Colors.green, size: 30),
-                      Positioned(
-                        right: 0,
-                        bottom: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            color: Colors.blue,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(Icons.info_outline,
-                              color: Colors.white, size: 14),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            if (hasCircle && mapState.destinationLocation != null)
-              Marker(
-                point: mapState.destinationLocation!,
-                child:
-                    const Icon(Icons.location_pin, color: Colors.red, size: 30),
-              ),
-          ],
-        ),
+        if (polylines.isNotEmpty) PolylineLayer(polylines: polylines),
+        MarkerLayer(markers: markers),
       ],
     );
   }

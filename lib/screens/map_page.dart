@@ -1,13 +1,14 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import 'package:circle_sync/models/circle_model.dart';
 import 'package:circle_sync/models/map_state_model.dart';
 import 'package:circle_sync/screens/widgets/circle_info_card.dart';
 import 'package:circle_sync/screens/widgets/create_circle_dialog.dart';
 import 'package:circle_sync/screens/widgets/map_widgets.dart';
 import 'package:circle_sync/screens/widgets/members_bottom_sheet.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:circle_sync/services/circle_service.dart';
 import 'package:circle_sync/services/location_service.dart';
 import 'package:circle_sync/services/route_service.dart';
@@ -15,7 +16,6 @@ import 'package:circle_sync/screens/widgets/map_info.dart';
 
 class MapPage extends StatefulWidget {
   final String? circleId;
-
   const MapPage({super.key, this.circleId});
 
   @override
@@ -41,94 +41,24 @@ class _MapPageState extends State<MapPage> {
     super.initState();
     _mapState = MapState();
     _isSharingLocation = _locationService.isLocationSharing;
-    loadCircle();
+    _loadInitialCircle();
   }
 
-  Future<void> loadCircle() async {
-    Map<String, dynamic> circleList = await _circleService.getCircleInfo();
-    var joinedCircles = circleList['joinedCircles'] as List<CircleModel>;
-    _loadCircleDetails(widget.circleId ??
-        (joinedCircles.isNotEmpty ? joinedCircles[0].id : null));
+  Future<void> _loadInitialCircle() async {
+    final info = await _circleService.getCircleInfo();
+    final joined = info['joinedCircles'] as List<CircleModel>;
+    final firstId =
+        widget.circleId ?? (joined.isNotEmpty ? joined[0].id : null);
+    await _loadCircleDetails(firstId);
   }
 
   Future<void> _loadCircleDetails(String? circleId) async {
-    if (circleId != null) {
-      try {
-        final circle = await _circleService.getCircle(circleId);
-        setState(() {
-          _currentCircleId = circleId;
-          _hasCircle = true;
-          _circleName = circle.name;
-          _circleMembers = circle.members;
-        });
-        await _locationService.startForegroundTask();
-        await _locationService.initInitialLocationAndRoute(
-          onLocationAndRouteUpdate:
-              (current, destination, trackingPoints) async {
-            setState(() {
-              _mapState = _mapState.copyWith(
-                currentLocation: current,
-                destinationLocation: destination,
-                trackingPoints: trackingPoints,
-              );
-            });
-            if (_mapState.destinationLocation != null) {
-              final routePoints = await _routeService.getRoute(
-                current.latitude,
-                current.longitude,
-                destination.latitude,
-                destination.longitude,
-              );
-              setState(() {
-                _mapState = _mapState.copyWith(osrmRoutePoints: routePoints);
-              });
-            }
-            mapController.move(current, 13.0);
-          },
-        );
-        _subscribeToLocationUpdates();
-        _subscribeToOtherUsersLocations();
-      } catch (e) {
-        debugPrint('Error loading circle: $e');
-        setState(() {
-          _hasCircle = false;
-        });
-        await _locationService.initStaticLocation(
-          onLocationUpdate: onStaticLocationUpdate, // Use the new callback
-          onTrackingUpdate: (trackingPoints) {
-            setState(() {
-              _mapState = _mapState.copyWith(trackingPoints: trackingPoints);
-            });
-          },
-        );
-        if (_mapState.currentLocation != null) {
-          mapController.move(_mapState.currentLocation!, 13.0);
-        }
-      }
-    } else {
-      setState(() {
-        _hasCircle = false;
-      });
-      await _locationService.initStaticLocation(
-        onLocationUpdate: onStaticLocationUpdate, // Use the new callback
-        onTrackingUpdate: (trackingPoints) {
-          setState(() {
-            _mapState = _mapState.copyWith(trackingPoints: trackingPoints);
-          });
-        },
-      );
-      if (_mapState.currentLocation != null) {
-        mapController.move(_mapState.currentLocation!, 13.0);
-      }
+    if (circleId == null) {
+      _enterStaticMode();
+      return;
     }
-  }
-
-  Future<void> _createCircleAndJoin(String circleName) async {
-    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-    if (currentUserId == null) return;
 
     try {
-      final circleId = await _circleService.createCircle(circleName, []);
       final circle = await _circleService.getCircle(circleId);
       setState(() {
         _currentCircleId = circleId;
@@ -136,16 +66,128 @@ class _MapPageState extends State<MapPage> {
         _circleName = circle.name;
         _circleMembers = circle.members;
       });
+
       await _locationService.startForegroundTask();
+      await _locationService.initInitialLocationAndRoute(
+        onLocationAndRouteUpdate: (current, destination, trackingPoints) async {
+          setState(() {
+            _mapState = _mapState.copyWith(
+              currentLocation: current,
+              destinationLocation: destination,
+              trackingPoints: trackingPoints,
+            );
+          });
+
+          final routePoints = await _routeService.getRoute(
+            current.latitude,
+            current.longitude,
+            destination.latitude,
+            destination.longitude,
+          );
+          setState(() {
+            _mapState = _mapState.copyWith(osrmRoutePoints: routePoints);
+          });
+
+          mapController.move(current, 13.0);
+        },
+      );
+
       _subscribeToLocationUpdates();
       _subscribeToOtherUsersLocations();
+    } catch (_) {
+      _enterStaticMode();
+    }
+  }
+
+  Future<void> _enterStaticMode() async {
+    setState(() {
+      _hasCircle = false;
+      _currentCircleId = null;
+    });
+    await _locationService.initStaticLocation(
+      onLocationUpdate: _onStaticLocation,
+      onTrackingUpdate: (points) {
+        setState(() {
+          _mapState = _mapState.copyWith(trackingPoints: points);
+        });
+      },
+    );
+    if (_mapState.currentLocation != null) {
+      mapController.move(_mapState.currentLocation!, 13.0);
+    }
+  }
+
+  void _onStaticLocation(LatLng loc) {
+    setState(() {
+      _mapState = _mapState.copyWith(currentLocation: loc);
+    });
+  }
+
+  Future<void> _createCircleAndJoin(String name) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    try {
+      final newId = await _circleService.createCircle(name, []);
+      await _loadCircleDetails(newId);
     } catch (e) {
-      debugPrint('Error creating circle: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Failed to create circle. Please try again.')),
+        const SnackBar(content: Text('Failed to create circle')),
       );
     }
+  }
+
+  void _subscribeToLocationUpdates() {
+    if (_currentCircleId == null) return;
+    _locationService.subscribeToLocationUpdates(
+      circleId: _currentCircleId!,
+      useSimulation: _useSimulation,
+      onLocationUpdate: (loc, points) {
+        setState(() {
+          _mapState = _mapState.copyWith(
+            currentLocation: loc,
+            trackingPoints: [..._mapState.trackingPoints, ...points],
+          );
+        });
+      },
+    );
+  }
+
+  void _subscribeToOtherUsersLocations() {
+    if (_currentCircleId == null) return;
+    _locationService.subscribeToOtherUsersLocations(
+      circleId: _currentCircleId!,
+      onLocationsUpdate: (others) {
+        print('Other location: $others');
+        setState(() {
+          _mapState = _mapState.copyWith(otherUsersLocations: others);
+        });
+      },
+    );
+  }
+
+  void _recenterMap() {
+    final loc = _mapState.currentLocation;
+    if (loc != null) mapController.move(loc, 13.0);
+  }
+
+  void _showMembersSheet() {
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => MembersBottomSheet(
+        members: _circleMembers,
+        circleId: _currentCircleId ?? '',
+        otherUsersLocations: _mapState.otherUsersLocations,
+        onMemberSelected: (memberId) {
+          final loc = _mapState.otherUsersLocations[memberId];
+          if (loc != null) mapController.move(loc, 13.0);
+        },
+        onMemberAdded: (newId) {
+          setState(() {
+            _circleMembers.add(newId);
+          });
+        },
+      ),
+    );
   }
 
   @override
@@ -164,18 +206,15 @@ class _MapPageState extends State<MapPage> {
                     showCurrentUserInfoDialog(
                         context, _mapState.currentLocation!);
                   },
-                  onOtherUserTap: (userId, location) {
-                    showUserInfoDialog(context, userId, location);
+                  onOtherUserTap: (userId, loc) {
+                    showUserInfoDialog(context, userId, loc);
                   },
                 ),
                 CircleInfoCard(
                   hasCircle: _hasCircle,
                   circleName: _circleName,
                   onCreateCircle: () {
-                    createCircleDialog(
-                      context,
-                      (String circleName) => _createCircleAndJoin(circleName),
-                    );
+                    createCircleDialog(context, _createCircleAndJoin);
                   },
                 ),
               ],
@@ -185,141 +224,44 @@ class _MapPageState extends State<MapPage> {
         children: [
           if (_hasCircle)
             FloatingActionButton(
-              onPressed: _showMembersBottomSheet,
-              tooltip: 'View Circle Members',
+              onPressed: _showMembersSheet,
+              tooltip: 'View Members',
               child: const Icon(Icons.group),
             ),
           const SizedBox(height: 10),
           FloatingActionButton(
-            tooltip: _isSharingLocation
-                ? 'Turn off location sharing'
-                : 'Turn on location sharing',
-            child: Icon(
-                _isSharingLocation ? Icons.gps_off_sharp : Icons.gps_fixed),
             onPressed: () {
-              if (_currentCircleId == null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('No circle selected')),
-                );
-                return;
-              }
-              if (_isSharingLocation) {
-                _locationService.pauseLocationSharing(
-                    _currentCircleId!, _mapState.currentLocation);
-                setState(() {
-                  _isSharingLocation = false;
-                });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Location sharing paused')),
-                );
-              } else {
-                _locationService.resumeLocationSharing(
-                    _currentCircleId!, _mapState.currentLocation);
-                setState(() {
-                  _isSharingLocation = true;
-                });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Location sharing resumed')),
-                );
+              if (_currentCircleId != null) {
+                if (_isSharingLocation) {
+                  _locationService.pauseLocationSharing(
+                      _currentCircleId!, _mapState.currentLocation);
+                } else {
+                  _locationService.resumeLocationSharing(
+                      _currentCircleId!, _mapState.currentLocation);
+                }
+                setState(() => _isSharingLocation = !_isSharingLocation);
               }
             },
+            tooltip: _isSharingLocation ? 'Pause Sharing' : 'Resume Sharing',
+            child: Icon(_isSharingLocation ? Icons.gps_off : Icons.gps_fixed),
           ),
           const SizedBox(height: 10),
           FloatingActionButton(
             onPressed: () {
-              setState(() {
-                _useSimulation = !_useSimulation;
-                _subscribeToLocationUpdates();
-              });
+              setState(() => _useSimulation = !_useSimulation);
+              _subscribeToLocationUpdates();
             },
-            tooltip: _useSimulation
-                ? 'Switch to Real Location'
-                : 'Switch to Simulation',
+            tooltip: _useSimulation ? 'Real Location' : 'Simulation',
             child:
                 Icon(_useSimulation ? Icons.location_on : Icons.location_off),
           ),
           const SizedBox(height: 10),
           FloatingActionButton(
             onPressed: _recenterMap,
-            tooltip: 'Re-center on Current Location',
+            tooltip: 'Recenter',
             child: const Icon(Icons.center_focus_strong),
           ),
         ],
-      ),
-    );
-  }
-
-  // Callback for initStaticLocation, which only provides a single LatLng
-  void onStaticLocationUpdate(LatLng updatedLocation) {
-    setState(() {
-      _mapState = _mapState.copyWith(
-        currentLocation: updatedLocation,
-      );
-    });
-  }
-
-  // Callback for subscribeToLocationUpdates, which provides LatLng and List<LatLng>
-  void onLocationUpdate(LatLng updatedLocation, List<LatLng> trackingPoints) {
-    setState(() {
-      _mapState = _mapState.copyWith(
-        currentLocation: updatedLocation,
-        trackingPoints: [..._mapState.trackingPoints, ...trackingPoints],
-      );
-    });
-  }
-
-  void _subscribeToLocationUpdates() {
-    print('here2');
-
-    if (_currentCircleId == null) return;
-
-    _locationService.subscribeToLocationUpdates(
-      circleId: _currentCircleId!,
-      useSimulation: _useSimulation,
-      onLocationUpdate: onLocationUpdate,
-    );
-  }
-
-  void _subscribeToOtherUsersLocations() {
-    if (_currentCircleId == null) return;
-
-    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-    if (currentUserId == null) return;
-
-    _locationService.subscribeToOtherUsersLocations(
-      circleId: _currentCircleId!,
-      onLocationsUpdate: (updatedLocations) {
-        setState(() {
-          _mapState = _mapState.copyWith(otherUsersLocations: updatedLocations);
-        });
-      },
-    );
-  }
-
-  void _recenterMap() {
-    if (_mapState.currentLocation != null) {
-      mapController.move(_mapState.currentLocation!, 13.0);
-    }
-  }
-
-  void _showMembersBottomSheet() {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => MembersBottomSheet(
-        members: _circleMembers,
-        circleId: _currentCircleId ?? '',
-        otherUsersLocations: _mapState.otherUsersLocations,
-        onMemberSelected: (memberId) {
-          final memberLocation = _mapState.otherUsersLocations[memberId];
-          if (memberLocation != null) {
-            mapController.move(memberLocation, 13.0);
-          }
-        },
-        onMemberAdded: (userId) {
-          setState(() {
-            _circleMembers.add(userId);
-          });
-        },
       ),
     );
   }

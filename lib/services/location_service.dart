@@ -172,22 +172,24 @@ class LocationService {
     required Function(Map<String, LatLng>) onLocationsUpdate,
   }) {
     _realtimeSubscription = _supabase
-        .from('locations:circle_id=eq.$circleId')
-        .stream(primaryKey: ['user_id']).listen((rows) {
-      final Map<String, LatLng> updated = {};
-      final user = _supabase.auth.currentUser;
-      final uid = user?.id;
+        .from('locations') // 1) subscribe to the table
+        .stream(primaryKey: ['location_id']) // 2) tell it what your PK is
+        .eq('circle_id', circleId) // 3) apply your filter
+        .listen((rows) {
+          print('listening: $rows');
+          final Map<String, LatLng> updated = {};
+          final uid = _supabase.auth.currentUser?.id;
 
-      for (var row in rows) {
-        final rowUid = row['user_id'] as String;
-        if (rowUid == uid) continue;
-        updated[rowUid] = LatLng(
-          (row['lat'] as num).toDouble(),
-          (row['lng'] as num).toDouble(),
-        );
-      }
-      onLocationsUpdate(updated);
-    });
+          for (final row in rows as List) {
+            final rowUid = row['user_id'] as String;
+            if (rowUid == uid) continue;
+            updated[rowUid] = LatLng(
+              (row['lat'] as num).toDouble(),
+              (row['lng'] as num).toDouble(),
+            );
+          }
+          onLocationsUpdate(updated);
+        });
   }
 
   /// Pause sharing: mark last known and pause
