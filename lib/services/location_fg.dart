@@ -92,16 +92,15 @@ class LocationTaskHandler extends TaskHandler {
     // 2) Fetch circleIds from Supabase instead of saved data
     try {
       // Filter on the JSONB/array 'members' column
-      final response = await _supabase
+      final response = await Supabase.instance.client
           .from('circles')
           .select('circle_id')
-          .contains('members', [
-        _userId
-      ]); // JSONB array containment :contentReference[oaicite:0]{index=0}
+          .contains('members', '["$_userId"]');
+      print('awow: $response');
 
       // Cast and extract the IDs
-      final List rows = response as List;
-      _circleIds = rows.map((r) => r['circle_id'] as String).toList();
+      _circleIds =
+          (response as List).map((r) => r['circle_id'] as String).toList();
       print('Fetched circles: $_circleIds');
     } catch (e) {
       print('Error fetching circles: $e');

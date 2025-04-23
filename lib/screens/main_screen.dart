@@ -37,7 +37,7 @@ class _MainPageState extends ConsumerState<MainPage> {
 
   List<Widget> _screenList(BuildContext context, WidgetRef ref) {
     return <Widget>[
-      const CirclesPage(),
+      const MapPage(),
       const CirclesPage(),
       const AccountPage(),
     ];
