@@ -155,8 +155,29 @@ class _CirclesPageState extends ConsumerState<CirclesPage> {
     if (!_isTracking) {
       bool hasPermissions = await Permissions.requestLocationPermissions();
       if (hasPermissions) {
-        await LocationTask.startForegroundTask();
-        setState(() => _isTracking = true);
+        final userId = Supabase.instance.client.auth.currentUser!.id;
+        print('here3.1: $userId');
+
+        try {
+          final resp = await Supabase.instance.client
+              .from('circles')
+              .select('circle_id')
+              .contains('members', '["$userId"]');
+
+          final circleIds =
+              (resp as List).map((r) => r['circle_id'] as String).toList();
+
+          print('here3');
+
+          await LocationTask.initForegroundTask();
+          await LocationTask.startForegroundTask(
+            userId: userId,
+            circleIds: circleIds,
+          );
+          setState(() => _isTracking = true);
+        } catch (e) {
+          print('error: $e');
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Location permissions denied')),

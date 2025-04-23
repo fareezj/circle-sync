@@ -21,7 +21,7 @@ class MainPage extends ConsumerStatefulWidget {
 }
 
 class _MainPageState extends ConsumerState<MainPage> {
-  int _selectedIndex = 0;
+  int _selectedIndex = 1;
 
   void _onChangedTab(int index) {
     setState(() {
@@ -37,7 +37,7 @@ class _MainPageState extends ConsumerState<MainPage> {
 
   List<Widget> _screenList(BuildContext context, WidgetRef ref) {
     return <Widget>[
-      const MapPage(),
+      const CirclesPage(),
       const CirclesPage(),
       const AccountPage(),
     ];
