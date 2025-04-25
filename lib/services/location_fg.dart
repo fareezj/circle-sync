@@ -60,8 +60,8 @@ class LocationTask {
 /// It must be a top‐level or static function so it can be serialized.
 @pragma('vm:entry-point')
 Future<void> startCallback() async {
-  WidgetsFlutterBinding.ensureInitialized();
   DartPluginRegistrant.ensureInitialized();
+  WidgetsFlutterBinding.ensureInitialized();
 
   // Re‐initialize Supabase in this isolate
   await Supabase.initialize(
