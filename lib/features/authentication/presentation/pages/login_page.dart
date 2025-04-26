@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:circle_sync/providers/app_configs/app_configs_provider.dart';
-import '../route_generator.dart';
+import '../../../../route_generator.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});

@@ -1,10 +1,10 @@
-import 'package:circle_sync/features/circles/circles_page.dart';
-import 'package:circle_sync/screens/login_page.dart';
-import 'package:circle_sync/screens/main_screen.dart';
-import 'package:circle_sync/screens/register_page.dart';
+import 'package:circle_sync/features/circles/presentation/pages/circles_page.dart';
+import 'package:circle_sync/features/authentication/presentation/pages/login_page.dart';
+import 'package:circle_sync/features/base/presentation/pages/main_screen.dart';
+import 'package:circle_sync/features/authentication/presentation/pages/register_page.dart';
 import 'package:flutter/material.dart';
 import 'package:circle_sync/screens/users_screen.dart';
-import 'package:circle_sync/screens/map_page.dart';
+import 'package:circle_sync/features/map/presentation/pages/map_page.dart';
 import 'package:circle_sync/screens/chat_screen.dart';
 
 class RouteGenerator {

@@ -1,8 +1,9 @@
+import 'package:circle_sync/features/map/data/models/map_models.dart';
+import 'package:circle_sync/features/map/presentation/widgets/places_bottom_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
 import 'package:circle_sync/models/circle_model.dart';
 import 'package:circle_sync/models/map_state_model.dart';
 import 'package:circle_sync/screens/widgets/circle_info_card.dart';
@@ -13,16 +14,18 @@ import 'package:circle_sync/services/circle_service.dart';
 import 'package:circle_sync/services/location_service.dart';
 import 'package:circle_sync/services/route_service.dart';
 import 'package:circle_sync/screens/widgets/map_info.dart';
+import 'package:circle_sync/features/map/presentation/providers/map_providers.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class MapPage extends StatefulWidget {
+class MapPage extends ConsumerStatefulWidget {
   final String? circleId;
   const MapPage({super.key, this.circleId});
 
   @override
-  State<MapPage> createState() => _MapPageState();
+  ConsumerState<ConsumerStatefulWidget> createState() => _MapPageState();
 }
 
-class _MapPageState extends State<MapPage> {
+class _MapPageState extends ConsumerState<MapPage> {
   final MapController mapController = MapController();
   final CircleService _circleService = CircleService();
   final LocationService _locationService = LocationService();
@@ -50,6 +53,9 @@ class _MapPageState extends State<MapPage> {
     final firstId =
         widget.circleId ?? (joined.isNotEmpty ? joined[0].id : null);
     await _loadCircleDetails(firstId);
+    if (firstId != null) {
+      await ref.read(mapNotiferProvider.notifier).getPlaces(firstId);
+    }
   }
 
   Future<void> _loadCircleDetails(String? circleId) async {
@@ -190,8 +196,19 @@ class _MapPageState extends State<MapPage> {
     );
   }
 
+  void _showPlacesSheet(List<PlacesModel> placeList) {
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => PlacesBottomSheet(
+        placeList: placeList,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final mapPageProvider = ref.watch(mapNotiferProvider);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Map View')),
       body: _mapState.currentLocation == null
@@ -229,6 +246,11 @@ class _MapPageState extends State<MapPage> {
               child: const Icon(Icons.group),
             ),
           const SizedBox(height: 10),
+          FloatingActionButton(
+            onPressed: () => _showPlacesSheet(mapPageProvider.placeList),
+            tooltip: 'Places',
+            child: const Icon(Icons.location_city),
+          ),
           FloatingActionButton(
             onPressed: () {
               if (_currentCircleId != null) {

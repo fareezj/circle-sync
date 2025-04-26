@@ -1,4 +1,4 @@
-import 'package:circle_sync/features/circles/circles_page.dart';
+import 'package:circle_sync/features/circles/presentation/pages/circles_page.dart';
 import 'package:circle_sync/screens/users_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';

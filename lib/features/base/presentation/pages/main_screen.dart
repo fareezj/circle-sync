@@ -1,6 +1,6 @@
-import 'package:circle_sync/features/account/account_page.dart';
-import 'package:circle_sync/features/circles/circles_page.dart';
-import 'package:circle_sync/screens/map_page.dart';
+import 'package:circle_sync/features/account/presentation/pages/account_page.dart';
+import 'package:circle_sync/features/circles/presentation/pages/circles_page.dart';
+import 'package:circle_sync/features/map/presentation/pages/map_page.dart';
 import 'package:circle_sync/utils/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
