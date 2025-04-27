@@ -38,6 +38,7 @@ class _MapPageState extends ConsumerState<MapPage> {
   String? _circleName;
   List<String> _circleMembers = [];
   bool _isSharingLocation = true;
+  LatLng? _selectedPlace;
 
   @override
   void initState() {
@@ -200,8 +201,14 @@ class _MapPageState extends ConsumerState<MapPage> {
     showModalBottomSheet(
       context: context,
       builder: (_) => PlacesBottomSheet(
-        placeList: placeList,
-      ),
+          placeList: placeList,
+          onClickPlace: (loc) {
+            Navigator.pop(context);
+            setState(() {
+              _selectedPlace = loc;
+            });
+            mapController.move(loc, 13.0);
+          }),
     );
   }
 
@@ -219,6 +226,7 @@ class _MapPageState extends ConsumerState<MapPage> {
                   mapController: mapController,
                   mapState: _mapState,
                   hasCircle: _hasCircle,
+                  selectedPlace: _selectedPlace,
                   onCurrentLocationTap: () {
                     showCurrentUserInfoDialog(
                         context, _mapState.currentLocation!);
