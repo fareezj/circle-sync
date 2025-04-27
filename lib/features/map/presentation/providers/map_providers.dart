@@ -1,3 +1,4 @@
+import 'package:circle_sync/features/map/data/models/map_models.dart';
 import 'package:circle_sync/features/map/data/models/map_state.dart';
 import 'package:circle_sync/features/map/domain/usecases/map_usecase.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,6 +14,18 @@ class MapNotifier extends StateNotifier<MapPageState> {
       final result = await mapUsecase.getPlaces(circleId);
       result.fold((_) {}, (list) {
         state = state.copyWith(placeList: list);
+      });
+    } catch (e) {
+      throw Exception(e);
+    }
+  }
+
+  Future<void> insertPlace(PlacesModel place) async {
+    try {
+      print(place.toJson());
+      final result = await mapUsecase.insertPlace(place);
+      result.fold((_) {}, (list) {
+        print('INSERT SUCCESS!');
       });
     } catch (e) {
       throw Exception(e);

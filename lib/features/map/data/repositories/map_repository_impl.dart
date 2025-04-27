@@ -18,4 +18,14 @@ class MapRepositoryImpl implements MapRepository {
       return Left(ServerError(errorMessage: e));
     }
   }
+
+  @override
+  Future<Either<Failure, void>> insertPlace(PlacesModel place) async {
+    try {
+      final result = await MapServices().insertPlace(place);
+      return Right(result);
+    } catch (e) {
+      return Left(ServerError(errorMessage: e));
+    }
+  }
 }

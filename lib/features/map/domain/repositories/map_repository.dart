@@ -4,4 +4,5 @@ import 'package:dartz/dartz.dart';
 
 abstract class MapRepository {
   Future<Either<Failure, List<PlacesModel>>> getPlaces(String circleId);
+  Future<Either<Failure, void>> insertPlace(PlacesModel place);
 }

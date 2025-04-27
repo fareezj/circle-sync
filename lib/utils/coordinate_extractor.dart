@@ -14,8 +14,8 @@ class LatLngExtractor {
     }
 
     // Parse the strings into doubles
-    final longitude = double.parse(coordsList[0].trim());
-    final latitude = double.parse(coordsList[1].trim());
+    final latitude = double.parse(coordsList[0].trim());
+    final longitude = double.parse(coordsList[1].trim());
 
     // Return as LatLng object
     return LatLng(latitude, longitude);

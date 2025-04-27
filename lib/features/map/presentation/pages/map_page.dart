@@ -1,4 +1,5 @@
 import 'package:circle_sync/features/map/data/models/map_models.dart';
+import 'package:circle_sync/features/map/presentation/widgets/add_place_bottom_sheet.dart';
 import 'package:circle_sync/features/map/presentation/widgets/places_bottom_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -16,6 +17,7 @@ import 'package:circle_sync/services/route_service.dart';
 import 'package:circle_sync/screens/widgets/map_info.dart';
 import 'package:circle_sync/features/map/presentation/providers/map_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/v4.dart';
 
 class MapPage extends ConsumerStatefulWidget {
   final String? circleId;
@@ -199,16 +201,71 @@ class _MapPageState extends ConsumerState<MapPage> {
 
   void _showPlacesSheet(List<PlacesModel> placeList) {
     showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+          // optional: round the top corners
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        builder: (_) {
+          final height = MediaQuery.of(context).size.height * 0.95;
+          return SizedBox(
+            height: height,
+            child: PlacesBottomSheet(
+                placeList: placeList,
+                onClickAddPlace: () {
+                  Navigator.pop(context);
+                  _showAddPlaceSheet();
+                },
+                onClickPlace: (loc) {
+                  Navigator.pop(context);
+                  setState(() {
+                    _selectedPlace = loc;
+                  });
+                  mapController.move(loc, 13.0);
+                }),
+          );
+        });
+  }
+
+  void _showAddPlaceSheet() {
+    if (_currentCircleId == null) return;
+
+    showModalBottomSheet(
       context: context,
-      builder: (_) => PlacesBottomSheet(
-          placeList: placeList,
-          onClickPlace: (loc) {
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) {
+        // pass in the current center so the map isn’t centered on (0,0)
+        final center = _mapState.currentLocation!;
+        return AddPlaceBottomSheet(
+          initialCenter: center,
+          onSave: (location, title) async {
+            // 1) call your provider/service to persist
+            await ref.read(mapNotiferProvider.notifier).insertPlace(
+                  PlacesModel(
+                    geofenceId: UuidV4().generate(),
+                    circleId: widget.circleId ?? '',
+                    centerGeography:
+                        'POINT(${location.latitude.toStringAsFixed(4)} ${location.longitude.toStringAsFixed(4)})',
+                    radiusM: 500,
+                    title: title,
+                    message: 'You are now at $title vicinity',
+                  ),
+                );
+
+            // 2) refresh your places
+            await ref
+                .read(mapNotiferProvider.notifier)
+                .getPlaces(_currentCircleId!);
+
+            // 3) close the sheet
             Navigator.pop(context);
-            setState(() {
-              _selectedPlace = loc;
-            });
-            mapController.move(loc, 13.0);
-          }),
+          },
+        );
+      },
     );
   }
 
@@ -258,6 +315,11 @@ class _MapPageState extends ConsumerState<MapPage> {
             onPressed: () => _showPlacesSheet(mapPageProvider.placeList),
             tooltip: 'Places',
             child: const Icon(Icons.location_city),
+          ),
+          FloatingActionButton(
+            onPressed: _showAddPlaceSheet,
+            tooltip: 'Add a Place',
+            child: const Icon(Icons.add_location_alt),
           ),
           FloatingActionButton(
             onPressed: () {

@@ -16,4 +16,8 @@ class MapUsecase {
   Future<Either<Failure, List<PlacesModel>>> getPlaces(String circleId) async {
     return await mapRepository.getPlaces(circleId);
   }
+
+  Future<Either<Failure, void>> insertPlace(PlacesModel place) async {
+    return await mapRepository.insertPlace(place);
+  }
 }

@@ -1,0 +1,121 @@
+import 'package:circle_sync/widgets/text_widgets.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+
+class AddPlaceBottomSheet extends StatefulWidget {
+  final LatLng initialCenter;
+  final Function(LatLng picked, String placeName) onSave;
+
+  const AddPlaceBottomSheet({
+    super.key,
+    required this.initialCenter,
+    required this.onSave,
+  });
+
+  @override
+  State<AddPlaceBottomSheet> createState() => _AddPlaceBottomSheetState();
+}
+
+class _AddPlaceBottomSheetState extends State<AddPlaceBottomSheet> {
+  LatLng? _pickedLocation;
+  final TextEditingController _titleController = TextEditingController();
+
+  @override
+  Widget build(BuildContext context) {
+    final height = MediaQuery.of(context).size.height * 0.9;
+
+    return SizedBox(
+      height: height,
+      child: Column(
+        children: [
+          Container(
+            width: 40,
+            height: 6,
+            margin: const EdgeInsets.symmetric(vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.grey[400],
+              borderRadius: BorderRadius.circular(3),
+            ),
+          ),
+
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child:
+                TextWidgets.mainSemiBold(title: 'Tap to pick your new place'),
+          ),
+
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(controller: _titleController),
+          ),
+
+          // 1) the map itself
+          Expanded(
+            child: FlutterMap(
+              options: MapOptions(
+                initialCenter: widget.initialCenter,
+                initialZoom: 13,
+                onTap: (tapPos, latlng) {
+                  setState(() => _pickedLocation = latlng);
+                },
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                ),
+
+                // show your picked pin
+                if (_pickedLocation != null)
+                  MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: _pickedLocation!,
+                        width: 40,
+                        height: 40,
+                        child: const Icon(
+                          Icons.location_pin,
+                          color: Colors.red,
+                          size: 40,
+                        ),
+                      ),
+                    ],
+                  ),
+                if (_pickedLocation != null)
+                  CircleLayer(
+                    circles: [
+                      CircleMarker(
+                        point: _pickedLocation!,
+                        radius: 1000, // in meters
+                        useRadiusInMeter: true,
+                        color: Colors.blue.withOpacity(0.2),
+                        borderColor: Colors.blue,
+                        borderStrokeWidth: 2,
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+          Text(_pickedLocation.toString() ?? ''),
+
+          // 2) Save button
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: ElevatedButton.icon(
+              onPressed: _pickedLocation == null
+                  ? null
+                  : () =>
+                      widget.onSave(_pickedLocation!, _titleController.text),
+              icon: const Icon(Icons.save),
+              label: const Text('Save Location'),
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size.fromHeight(48),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

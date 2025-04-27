@@ -10,6 +10,16 @@ class MapServices {
           await _client.from('geofences').select().eq('circle_id', circleId);
       return resultList.map((place) => PlacesModel.fromJson(place)).toList();
     } catch (e) {
+      print('Awow: $e');
+      throw Exception(e);
+    }
+  }
+
+  Future<void> insertPlace(PlacesModel place) async {
+    try {
+      final result = await _client.from('geofences').insert(place.toJson());
+      print('INSERT RESULT: $result');
+    } catch (e) {
       throw Exception(e);
     }
   }
