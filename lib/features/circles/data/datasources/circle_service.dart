@@ -1,3 +1,4 @@
+import 'package:circle_sync/features/circles/data/models/circle_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:circle_sync/models/circle_model.dart';
 
@@ -59,6 +60,119 @@ class CircleService {
     }
   }
 
+  Future<void> joinCircle(String joinCode) async {
+    try {
+      print('JOIN CODE: $joinCode');
+      // 1) Lookup the circle by code
+      final circle = await _supabase
+          .from('circles')
+          .select('circle_id')
+          .eq('join_code', joinCode)
+          .maybeSingle();
+
+      if (circle != null) {
+        // 2) Insert membership
+        await _supabase.from('circle_members').insert({
+          'circle_id': circle['circle_id'],
+          'user_id': _supabase.auth.currentUser!.id,
+        });
+      }
+    } catch (e) {
+      throw Exception(e);
+    }
+  }
+
+  Future<void> getCircles() async {
+    try {
+      final userId = _supabase.auth.currentUser!.id;
+
+// 1) Query circle_members + FK-join into circles
+      final response = await _supabase.from('circle_members').select(r'''
+      circle_id,
+      circles (        
+        circle_id,
+        name,
+        members,
+        created_by,
+        date_created
+      )
+    ''').eq('user_id', userId);
+
+// 2) Pull out the raw rows
+      final rows = response;
+
+// 3) Check if they’ve joined anything
+      final hasJoinedAny = rows.isNotEmpty;
+
+      if (!hasJoinedAny) {
+        print('User has not joined any circles');
+        // you can return [] or handle the “none joined” case here
+      } else {
+        // 4) Map each nested circles object into your model
+        final joinedCircles = rows.map((r) {
+          final c = r['circles'] as Map<String, dynamic>;
+          return CircleModel.fromMap(c);
+        }).toList();
+
+        print('User has joined ${joinedCircles.length} circles:');
+        for (var c in joinedCircles) {
+          print(' • ${c.name} (id=${c.id})');
+        }
+      }
+    } catch (e) {
+      throw Exception(e);
+    }
+  }
+
+  Future<List<CircleMembersModel>> getCircleMembers(String circleId) async {
+    try {
+      // 1) Fetch circle members + join on users to get name
+      final response = await _supabase.from('circle_members').select('''
+    user_id,
+    role,
+    users ( name )
+  ''').eq('circle_id', circleId);
+
+      // 2) Map the result into your model
+      final members = (response as List<dynamic>).map((item) {
+        return CircleMembersModel(
+          userId: item['user_id'] as String,
+          name: (item['users'] as Map<String, dynamic>)['name'] as String,
+          role: item['role'] as String,
+        );
+      }).toList();
+
+      return members;
+    } catch (e) {
+      throw Exception(e);
+    }
+  }
+
+  Future<List<CircleModel>> getJoinedCircles() async {
+    try {
+      final userId = _supabase.auth.currentUser!.id;
+
+      // 1) Query circle_members and FK-join into circles
+      final response = await _supabase.from('circle_members').select(r'''
+        circles (
+          circle_id,
+          name,
+          members,
+          created_by,
+          date_created
+        )
+      ''').eq('user_id', userId);
+
+      // 2) Unwrap & map into your CircleModel
+      return response.map((row) {
+        final json = row['circles'] as Map<String, dynamic>;
+        return CircleModel.fromMap(json);
+      }).toList();
+    } catch (e) {
+      throw Exception('Error fetching joined circles: $e');
+    }
+  }
+
   Future<void> acceptInvitation(String invitationId) async {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('Not signed in');
@@ -114,9 +228,12 @@ class CircleService {
     print('Getting user circle: $userId');
 
     try {
-      rows = await _supabase.from('circles').select();
-
-      print(rows);
+      rows = await _supabase.from('circles').select().eq('user_id', userId);
+      if (rows.isNotEmpty) {
+        return rows.map((e) => CircleModel.fromMap(e)).toList();
+      } else {
+        return [];
+      }
     } catch (e) {
       print(e);
     }

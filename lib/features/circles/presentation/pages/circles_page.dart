@@ -1,8 +1,9 @@
+import 'package:circle_sync/features/circles/presentation/providers/circle_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:circle_sync/models/circle_model.dart';
-import 'package:circle_sync/services/circle_service.dart';
+import 'package:circle_sync/features/circles/data/datasources/circle_service.dart';
 import 'package:circle_sync/services/location_fg.dart';
 import 'package:circle_sync/services/permissions.dart';
 import 'package:circle_sync/widgets/text_widgets.dart';
@@ -47,8 +48,8 @@ class _CirclesPageState extends ConsumerState<CirclesPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 TextWidgets.mainBold(title: 'Your Circles', fontSize: 24.0),
-                FutureBuilder<Map<String, dynamic>>(
-                  future: circleService.getCircleInfo(),
+                FutureBuilder<List<CircleModel>>(
+                  future: circleService.getJoinedCircles(),
                   builder: (context, snapshot) {
                     if (!snapshot.hasData) {
                       return const Padding(
@@ -56,12 +57,7 @@ class _CirclesPageState extends ConsumerState<CirclesPage> {
                         child: CircularProgressIndicator(),
                       );
                     }
-
-                    final joinedCircles =
-                        snapshot.data!['joinedCircles'] as List<CircleModel>;
-                    final invitations = snapshot.data!['invitations']
-                        as List<Map<String, dynamic>>;
-
+                    final joinedCircles = snapshot.data;
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -75,7 +71,7 @@ class _CirclesPageState extends ConsumerState<CirclesPage> {
                           child: TextWidgets.mainSemiBold(
                               title: 'Joined Circles', fontSize: 18.0),
                         ),
-                        if (joinedCircles.isEmpty)
+                        if (joinedCircles!.isEmpty)
                           Padding(
                             padding: EdgeInsets.symmetric(vertical: 8.0),
                             child: TextWidgets.mainSemiBold(
@@ -96,49 +92,19 @@ class _CirclesPageState extends ConsumerState<CirclesPage> {
                           child: TextWidgets.mainSemiBold(
                               title: 'Circle Invitations', fontSize: 18.0),
                         ),
-                        if (invitations.isEmpty)
-                          Padding(
-                            padding: EdgeInsets.symmetric(vertical: 8.0),
-                            child: TextWidgets.mainSemiBold(
-                                title: 'You have no pending invitations'),
-                          ),
-                        ...invitations.map((inv) {
-                          final circle = inv['circle'] as CircleModel;
-                          final invitedBy = inv['invitedBy'] as String;
-                          final invitationId = inv['invitationId'] as String;
-                          return ListTile(
-                            title: Text(circle.name),
-                            subtitle: Text('Invited by: $invitedBy'),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.check,
-                                      color: Colors.green),
-                                  onPressed: () async {
-                                    await circleService
-                                        .acceptInvitation(invitationId);
-                                    Navigator.pushNamed(
-                                      context,
-                                      RouteGenerator.mapPage,
-                                      arguments: {'circleId': circle.id},
-                                    );
-                                  },
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.close,
-                                      color: Colors.red),
-                                  onPressed: () async {
-                                    await circleService
-                                        .declineInvitation(invitationId);
-                                    setState(() {});
-                                  },
-                                ),
-                              ],
-                            ),
-                          );
-                        }),
                         const SizedBox(height: 8),
+                        ElevatedButton(
+                            onPressed: () {
+                              ref
+                                  .read(circleNotifierProvider.notifier)
+                                  .joinCircle();
+                            },
+                            child: Text('Join circle')),
+                        ElevatedButton(
+                            onPressed: () {
+                              CircleService().getCircles();
+                            },
+                            child: Text('Get circles')),
                       ],
                     );
                   },

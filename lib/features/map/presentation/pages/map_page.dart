@@ -1,3 +1,4 @@
+import 'package:circle_sync/features/circles/data/models/circle_model.dart';
 import 'package:circle_sync/features/map/data/models/map_models.dart';
 import 'package:circle_sync/features/map/presentation/widgets/add_place_bottom_sheet.dart';
 import 'package:circle_sync/features/map/presentation/widgets/places_bottom_sheet.dart';
@@ -11,7 +12,7 @@ import 'package:circle_sync/screens/widgets/circle_info_card.dart';
 import 'package:circle_sync/screens/widgets/create_circle_dialog.dart';
 import 'package:circle_sync/screens/widgets/map_widgets.dart';
 import 'package:circle_sync/screens/widgets/members_bottom_sheet.dart';
-import 'package:circle_sync/services/circle_service.dart';
+import 'package:circle_sync/features/circles/data/datasources/circle_service.dart';
 import 'package:circle_sync/services/location_service.dart';
 import 'package:circle_sync/services/route_service.dart';
 import 'package:circle_sync/screens/widgets/map_info.dart';
@@ -38,7 +39,7 @@ class _MapPageState extends ConsumerState<MapPage> {
   String? _currentCircleId;
   bool _hasCircle = false;
   String? _circleName;
-  List<String> _circleMembers = [];
+  final List<CircleMembersModel> _circleMembers = [];
   bool _isSharingLocation = true;
   LatLng? _selectedPlace;
 
@@ -69,11 +70,12 @@ class _MapPageState extends ConsumerState<MapPage> {
 
     try {
       final circle = await _circleService.getCircle(circleId);
+      final members = await _circleService.getCircleMembers(circleId);
       setState(() {
         _currentCircleId = circleId;
         _hasCircle = true;
         _circleName = circle.name;
-        _circleMembers = circle.members;
+        // _circleMembers = members;
       });
 
       await _locationService.startForegroundTask();
@@ -191,9 +193,9 @@ class _MapPageState extends ConsumerState<MapPage> {
           if (loc != null) mapController.move(loc, 13.0);
         },
         onMemberAdded: (newId) {
-          setState(() {
-            _circleMembers.add(newId);
-          });
+          // setState(() {
+          //   _circleMembers.add(newId);
+          // });
         },
       ),
     );

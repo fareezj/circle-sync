@@ -86,7 +86,7 @@ class _AddPlaceBottomSheetState extends State<AddPlaceBottomSheet> {
                     circles: [
                       CircleMarker(
                         point: _pickedLocation!,
-                        radius: 1000, // in meters
+                        radius: 500, // in meters
                         useRadiusInMeter: true,
                         color: Colors.blue.withOpacity(0.2),
                         borderColor: Colors.blue,

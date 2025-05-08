@@ -1,9 +1,10 @@
+import 'package:circle_sync/features/circles/data/models/circle_model.dart';
 import 'package:flutter/material.dart';
-import 'package:circle_sync/services/circle_service.dart';
+import 'package:circle_sync/features/circles/data/datasources/circle_service.dart';
 import 'package:latlong2/latlong.dart';
 
 class MembersBottomSheet extends StatelessWidget {
-  final List<String> members;
+  final List<CircleMembersModel> members;
   final String circleId;
   final Map<String, LatLng> otherUsersLocations;
   final Function(String) onMemberSelected;
@@ -96,10 +97,9 @@ class MembersBottomSheet extends StatelessWidget {
               shrinkWrap: true,
               itemCount: members.length,
               itemBuilder: (context, index) {
-                final memberId = members[index];
+                final memberId = members[index].userId;
                 return ListTile(
-                  title: Text(
-                      'User: $memberId'), // Replace with actual user name if available
+                  title: Text(members[index].name),
                   onTap: () {
                     final memberLocation = otherUsersLocations[memberId];
                     if (memberLocation != null) {
