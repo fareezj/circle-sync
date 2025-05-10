@@ -1,4 +1,3 @@
-import 'package:circle_sync/features/circles/data/datasources/circle_service.dart';
 import 'package:circle_sync/features/circles/domain/usecases/circle_usecase.dart';
 import 'package:circle_sync/features/map/data/models/map_models.dart';
 import 'package:circle_sync/features/map/data/models/map_state.dart';
@@ -18,6 +17,14 @@ class MapNotifier extends StateNotifier<MapPageState> {
   final CircleUsecase circleUsecase;
   MapNotifier(this.mapUsecase, this.circleUsecase, this.ref)
       : super(MapPageState(isLoading: false, placeList: []));
+
+  void updateLocationSharing(bool isSharing) {
+    state = state.copyWith(isSharingLocation: isSharing);
+  }
+
+  void updateSelectedPlace(LatLng place) {
+    state = state.copyWith(selectedPlace: place);
+  }
 
   Future<CircleModel?> loadInitialCircle() async {
     final circles = await circleUsecase.getJoinedCircles();

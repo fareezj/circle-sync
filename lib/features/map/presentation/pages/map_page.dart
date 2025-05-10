@@ -1,4 +1,3 @@
-import 'package:circle_sync/features/circles/data/models/circle_model.dart';
 import 'package:circle_sync/features/map/data/models/map_models.dart';
 import 'package:circle_sync/features/map/presentation/pages/widgets/add_circle_sheet.dart';
 import 'package:circle_sync/features/map/presentation/widgets/add_place_bottom_sheet.dart';
@@ -6,16 +5,11 @@ import 'package:circle_sync/features/map/presentation/widgets/places_bottom_shee
 import 'package:circle_sync/models/circle_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:circle_sync/models/map_state_model.dart';
 import 'package:circle_sync/screens/widgets/circle_info_card.dart';
-import 'package:circle_sync/screens/widgets/create_circle_dialog.dart';
 import 'package:circle_sync/screens/widgets/map_widgets.dart';
 import 'package:circle_sync/screens/widgets/members_bottom_sheet.dart';
-import 'package:circle_sync/features/circles/data/datasources/circle_service.dart';
 import 'package:circle_sync/services/location_service.dart';
-import 'package:circle_sync/services/route_service.dart';
 import 'package:circle_sync/screens/widgets/map_info.dart';
 import 'package:circle_sync/features/map/presentation/providers/map_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -31,30 +25,23 @@ class MapPage extends ConsumerStatefulWidget {
 
 class _MapPageState extends ConsumerState<MapPage> {
   final MapController mapController = MapController();
-  final CircleService _circleService = CircleService();
   final LocationService _locationService = LocationService();
-  final RouteService _routeService = RouteService();
-
-  bool _useSimulation = false;
-  String? _currentCircleId;
-  final bool _hasCircle = false;
-  final List<CircleModel> _joinedCircles = [];
-  String? _circleName;
-  final List<CircleMembersModel> _circleMembers = [];
-  bool _isSharingLocation = true;
-  LatLng? _selectedPlace;
 
   @override
   void initState() {
     super.initState();
-    _isSharingLocation = _locationService.isLocationSharing;
-    ref
-        .read(mapNotiferProvider.notifier)
-        .loadInitialCircle()
-        .then((circle) async {
-      await ref
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref
           .read(mapNotiferProvider.notifier)
-          .loadCircleDetails(circle, mapController);
+          .updateLocationSharing(_locationService.isLocationSharing);
+      ref
+          .read(mapNotiferProvider.notifier)
+          .loadInitialCircle()
+          .then((circle) async {
+        await ref
+            .read(mapNotiferProvider.notifier)
+            .loadCircleDetails(circle, mapController);
+      });
     });
   }
 
@@ -101,8 +88,8 @@ class _MapPageState extends ConsumerState<MapPage> {
     showModalBottomSheet(
       context: context,
       builder: (_) => MembersBottomSheet(
-        members: _circleMembers,
-        circleId: _currentCircleId ?? '',
+        members: mapPageProvider.circleMembers,
+        circleId: mapPageProvider.currentCircleId,
         otherUsersLocations: mapPageProvider.otherUsersLocations,
         onMemberSelected: (memberId) {
           final loc = mapPageProvider.otherUsersLocations[memberId];
@@ -118,6 +105,7 @@ class _MapPageState extends ConsumerState<MapPage> {
   }
 
   void _showPlacesSheet(List<PlacesModel> placeList) {
+    final mapPageProvider = ref.watch(mapNotiferProvider);
     showModalBottomSheet(
         context: context,
         isScrollControlled: true,
@@ -137,9 +125,9 @@ class _MapPageState extends ConsumerState<MapPage> {
                 },
                 onClickPlace: (loc) {
                   Navigator.pop(context);
-                  setState(() {
-                    _selectedPlace = loc;
-                  });
+                  ref
+                      .read(mapNotiferProvider.notifier)
+                      .updateSelectedPlace(loc);
                   mapController.move(loc, 13.0);
                 }),
           );
@@ -177,7 +165,7 @@ class _MapPageState extends ConsumerState<MapPage> {
             // 2) refresh your places
             await ref
                 .read(mapNotiferProvider.notifier)
-                .getPlaces(_currentCircleId!);
+                .getPlaces(mapPageProvider.currentCircleId);
 
             // 3) close the sheet
             Navigator.pop(context);
@@ -205,8 +193,8 @@ class _MapPageState extends ConsumerState<MapPage> {
                     trackingPoints: mapPageProvider.trackingPoints,
                     otherUsersLocations: mapPageProvider.otherUsersLocations,
                   ),
-                  hasCircle: _hasCircle,
-                  selectedPlace: _selectedPlace,
+                  hasCircle: mapPageProvider.hasCircle,
+                  selectedPlace: mapPageProvider.selectedPlace,
                   onCurrentLocationTap: () {
                     showCurrentUserInfoDialog(
                         context, mapPageProvider.currentLocation!);
@@ -260,29 +248,38 @@ class _MapPageState extends ConsumerState<MapPage> {
           const SizedBox(height: 10),
           FloatingActionButton(
             onPressed: () {
-              if (_currentCircleId != null) {
-                if (_isSharingLocation) {
-                  _locationService.pauseLocationSharing(
-                      _currentCircleId!, mapPageProvider.currentLocation);
-                } else {
-                  _locationService.resumeLocationSharing(
-                      _currentCircleId!, mapPageProvider.currentLocation);
-                }
-                setState(() => _isSharingLocation = !_isSharingLocation);
+              final isSharingLocation = mapPageProvider.isSharingLocation;
+              if (isSharingLocation) {
+                _locationService.pauseLocationSharing(
+                    mapPageProvider.currentCircleId,
+                    mapPageProvider.currentLocation);
+              } else {
+                _locationService.resumeLocationSharing(
+                    mapPageProvider.currentCircleId,
+                    mapPageProvider.currentLocation);
               }
+              ref
+                  .read(mapNotiferProvider.notifier)
+                  .updateLocationSharing(!isSharingLocation);
             },
-            tooltip: _isSharingLocation ? 'Pause Sharing' : 'Resume Sharing',
-            child: Icon(_isSharingLocation ? Icons.gps_off : Icons.gps_fixed),
+            tooltip: mapPageProvider.isSharingLocation
+                ? 'Pause Sharing'
+                : 'Resume Sharing',
+            child: Icon(mapPageProvider.isSharingLocation
+                ? Icons.gps_off
+                : Icons.gps_fixed),
           ),
           const SizedBox(height: 10),
           FloatingActionButton(
             onPressed: () {
-              setState(() => _useSimulation = !_useSimulation);
+              //setState(() => _useSimulation = !_useSimulation);
               // _subscribeToLocationUpdates();
             },
-            tooltip: _useSimulation ? 'Real Location' : 'Simulation',
-            child:
-                Icon(_useSimulation ? Icons.location_on : Icons.location_off),
+            tooltip:
+                mapPageProvider.useSimulation ? 'Real Location' : 'Simulation',
+            child: Icon(mapPageProvider.useSimulation
+                ? Icons.location_on
+                : Icons.location_off),
           ),
           const SizedBox(height: 10),
           FloatingActionButton(
