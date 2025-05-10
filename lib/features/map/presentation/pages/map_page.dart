@@ -153,7 +153,7 @@ class _MapPageState extends ConsumerState<MapPage> {
             await ref.read(mapNotiferProvider.notifier).insertPlace(
                   PlacesModel(
                     geofenceId: UuidV4().generate(),
-                    circleId: widget.circleId ?? '',
+                    circleId: mapPageProvider.currentCircleId ?? '',
                     centerGeography:
                         'POINT(${location.latitude.toStringAsFixed(4)} ${location.longitude.toStringAsFixed(4)})',
                     radiusM: 500,
@@ -202,6 +202,7 @@ class _MapPageState extends ConsumerState<MapPage> {
                   onOtherUserTap: (userId, loc) {
                     showUserInfoDialog(context, userId, loc);
                   },
+                  places: mapPageProvider.placeList,
                 ),
                 CircleInfoCard(
                   circleList: mapPageProvider.joinedCircles,

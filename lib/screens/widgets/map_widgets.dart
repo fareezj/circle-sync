@@ -1,20 +1,24 @@
-// map_widgets.dart
-
+import 'package:circle_sync/features/map/data/models/map_models.dart';
+import 'package:circle_sync/features/map/presentation/providers/map_providers.dart';
+import 'package:circle_sync/utils/coordinate_extractor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:circle_sync/models/map_state_model.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class MapWidget extends StatelessWidget {
+class MapWidget extends ConsumerStatefulWidget {
   final MapController mapController;
   final MapState mapState;
   final bool hasCircle;
   final LatLng? selectedPlace;
   final VoidCallback onCurrentLocationTap;
+  final List<PlacesModel>? places;
   final void Function(String userId, LatLng location) onOtherUserTap;
 
   const MapWidget({
     super.key,
+    this.places,
     required this.mapController,
     required this.mapState,
     required this.hasCircle,
@@ -24,34 +28,87 @@ class MapWidget extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    // 1) build your markers
-    final markers = <Marker>[];
+  ConsumerState<ConsumerStatefulWidget> createState() => _MapWidgetState();
+}
 
-    // current user
-    if (mapState.currentLocation != null) {
+class _MapWidgetState extends ConsumerState<MapWidget> {
+  late List<Marker> markers;
+  late List<Polyline> polylines;
+
+  @override
+  void initState() {
+    super.initState();
+    _buildMarkers();
+    _buildPolylines();
+  }
+
+  void _buildMarkers() {
+    markers = <Marker>[];
+
+    // Current user marker
+    if (widget.mapState.currentLocation != null) {
       markers.add(
         Marker(
-          point: mapState.currentLocation!,
+          point: widget.mapState.currentLocation!,
           width: 40,
           height: 40,
           child: GestureDetector(
-            onTap: onCurrentLocationTap,
+            onTap: widget.onCurrentLocationTap,
             child: const Icon(Icons.my_location, color: Colors.blue, size: 32),
           ),
         ),
       );
     }
 
-    // other users
-    mapState.otherUsersLocations.forEach((userId, loc) {
+    // Place markers
+    if (widget.places != null) {
+      for (var place in widget.places!) {
+        final latLng = LatLngExtractor.extractLatLng(place.centerGeography);
+        markers.add(
+          Marker(
+            point: LatLng(latLng.latitude, latLng.longitude),
+            width: 40,
+            height: 40,
+            child: GestureDetector(
+              onTap: () {
+                ref
+                    .read(mapNotiferProvider.notifier)
+                    .updateSelectedPlace(latLng);
+                widget.mapController.move(latLng, 13.0);
+
+                // Show place details
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: Text('Place Details'),
+                    content: Text(
+                        'You selected a place at ${latLng.latitude}, ${latLng.longitude}'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Close'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              child:
+                  const Icon(Icons.location_on, color: Colors.blue, size: 32),
+            ),
+          ),
+        );
+      }
+    }
+
+    // Other users' markers
+    widget.mapState.otherUsersLocations.forEach((userId, loc) {
       markers.add(
         Marker(
           point: loc,
           width: 36,
           height: 36,
           child: GestureDetector(
-            onTap: () => onOtherUserTap(userId, loc),
+            onTap: () => widget.onOtherUserTap(userId, loc),
             child: const Icon(Icons.person_pin_circle,
                 color: Colors.redAccent, size: 30),
           ),
@@ -59,11 +116,11 @@ class MapWidget extends StatelessWidget {
       );
     });
 
-    // selected place pin
-    if (selectedPlace != null) {
+    // Selected place marker
+    if (widget.selectedPlace != null) {
       markers.add(
         Marker(
-          point: selectedPlace!,
+          point: widget.selectedPlace!,
           width: 40,
           height: 40,
           child: const Icon(
@@ -74,38 +131,47 @@ class MapWidget extends StatelessWidget {
         ),
       );
     }
+  }
 
-    // 2) build your polylines
-    final polylines = <Polyline>[];
-    if (mapState.osrmRoutePoints.isNotEmpty) {
-      polylines.add(Polyline(points: mapState.osrmRoutePoints, strokeWidth: 4));
-    }
-    if (mapState.trackingPoints.isNotEmpty) {
-      polylines.add(Polyline(points: mapState.trackingPoints, strokeWidth: 2));
+  void _buildPolylines() {
+    polylines = <Polyline>[];
+
+    if (widget.mapState.osrmRoutePoints.isNotEmpty) {
+      polylines.add(
+        Polyline(points: widget.mapState.osrmRoutePoints, strokeWidth: 4),
+      );
     }
 
-    // 3) assemble the map
+    if (widget.mapState.trackingPoints.isNotEmpty) {
+      polylines.add(
+        Polyline(points: widget.mapState.trackingPoints, strokeWidth: 2),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return FlutterMap(
-      mapController: mapController,
+      mapController: widget.mapController,
       options: MapOptions(
-        initialCenter: mapState.currentLocation ?? LatLng(0, 0),
+        initialCenter: widget.mapState.currentLocation ?? LatLng(0, 0),
         initialZoom: 13,
       ),
       children: [
-        // base tiles
+        // Base tiles
         TileLayer(
           urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
         ),
 
-        // draw your route & history
+        // Draw routes and tracking history
         if (polylines.isNotEmpty) PolylineLayer(polylines: polylines),
 
-        // **1 km circle under the pin**
-        if (selectedPlace != null)
+        // 1 km circle under the selected place pin
+        if (widget.selectedPlace != null)
           CircleLayer(
             circles: [
               CircleMarker(
-                point: selectedPlace!,
+                point: widget.selectedPlace!,
                 radius: 1000, // in meters
                 useRadiusInMeter: true,
                 color: Colors.blue.withOpacity(0.2),
@@ -115,7 +181,7 @@ class MapWidget extends StatelessWidget {
             ],
           ),
 
-        // all markers (current, others, and the place pin)
+        // All markers (current user, others, and place pins)
         MarkerLayer(markers: markers),
       ],
     );
