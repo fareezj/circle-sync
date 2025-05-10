@@ -5,6 +5,8 @@ import 'package:latlong2/latlong.dart';
 class RouteService {
   Future<List<LatLng>> getRoute(
       double startLat, double startLon, double endLat, double endLon) async {
+    print('startLat: $startLat, startLon: $startLon');
+    print('endLat: $endLat, endLon: $endLon');
     final url = Uri.parse(
       'http://router.project-osrm.org/route/v1/driving/$startLon,$startLat;$endLon,$endLat?overview=full&geometries=geojson',
     );

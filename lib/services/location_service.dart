@@ -148,7 +148,8 @@ class LocationService {
     bool isPaused,
   ) async {
     try {
-      print('updating location');
+      print('updating location circleId: $circleId, userId: $userId');
+      print('updating location lat: ${loc.latitude}, lng: ${loc.longitude}');
       await _supabase.from('locations').upsert(
         {
           'location_id': Uuid().v4(),

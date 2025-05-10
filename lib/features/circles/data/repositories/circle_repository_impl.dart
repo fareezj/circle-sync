@@ -1,5 +1,6 @@
 import 'package:circle_sync/core/errors/failure.dart';
 import 'package:circle_sync/features/circles/data/datasources/circle_service.dart';
+import 'package:circle_sync/features/circles/data/models/circle_model.dart';
 import 'package:circle_sync/features/circles/domain/repositories/circle_repository.dart';
 import 'package:circle_sync/models/circle_model.dart';
 import 'package:dartz/dartz.dart';
@@ -20,9 +21,10 @@ class CircleRepositoryImpl implements CircleRepository {
   }
 
   @override
-  Future<Either<Failure, void>> getCircleMembers(String circleId) async {
+  Future<Either<Failure, List<CircleMembersModel>>> getCircleMembers(
+      String circleId) async {
     try {
-      final result = CircleService().getCircleMembers(circleId);
+      final result = await CircleService().getCircleMembers(circleId);
       return Right(result);
     } catch (e) {
       return Left(ServerError(errorMessage: e));

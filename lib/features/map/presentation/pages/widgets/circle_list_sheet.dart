@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class CircleListSheet extends ConsumerStatefulWidget {
-  final Function(String) onCircleTap;
+  final Function(CircleModel) onCircleTap;
   final List<CircleModel> circleList;
 
   const CircleListSheet(
@@ -49,7 +49,7 @@ class _CircleListSheetState extends ConsumerState<CircleListSheet> {
                   title: Text(widget.circleList[index]
                       .name), // Replace with actual circle name
                   onTap: () {
-                    widget.onCircleTap(widget.circleList[index].id);
+                    widget.onCircleTap(widget.circleList[index]);
                   },
                 );
               },

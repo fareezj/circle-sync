@@ -18,7 +18,7 @@ class CircleNotifier extends StateNotifier<CirclePageState> {
 
   Future<void> joinCircle() async {
     try {
-      await circleUsecase.joinCircle('MULAN');
+      await circleUsecase.joinCircle('Y7FC');
     } catch (e) {
       throw Exception(e);
     }

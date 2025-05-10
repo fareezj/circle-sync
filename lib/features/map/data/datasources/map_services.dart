@@ -10,7 +10,6 @@ class MapServices {
           await _client.from('geofences').select().eq('circle_id', circleId);
       return resultList.map((place) => PlacesModel.fromJson(place)).toList();
     } catch (e) {
-      print('Awow: $e');
       throw Exception(e);
     }
   }

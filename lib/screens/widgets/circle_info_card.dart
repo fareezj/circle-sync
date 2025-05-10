@@ -6,7 +6,7 @@ class CircleInfoCard extends StatelessWidget {
   final bool hasCircle;
   final String? circleName;
   List<CircleModel> circleList;
-  final Function(String) onCircleTap;
+  final Function(CircleModel) onCircleTap;
   final VoidCallback onCreateCircle;
 
   CircleInfoCard({
