@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:circle_sync/features/circles/data/models/circle_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:circle_sync/models/circle_model.dart';
@@ -6,17 +8,21 @@ class CircleService {
   final SupabaseClient _supabase = Supabase.instance.client;
 
   /// 1. Create a new circle, return its ID
-  Future<String> createCircle(String name, List<String> memberIds) async {
+  Future<String> createCircle(String name) async {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('User not authenticated');
+
+    final joinCode = generateRandomCode(4);
 
     // Insert and get back the new record
     final rows = await _supabase.from('circles').insert({
       'name': name,
       'created_by': user.id,
       'date_created': DateTime.now().toIso8601String(),
-      'members': [user.id, ...memberIds],
-    }).select(); // returns List<dynamic> :contentReference[oaicite:3]{index=3}
+      'join_code': joinCode
+    }).select();
+
+    joinCircle(joinCode);
 
     // rows is List<dynamic>, so cast to List<Map>
     if (rows.isEmpty) {
@@ -157,7 +163,6 @@ class CircleService {
         circles (
           circle_id,
           name,
-          members,
           created_by,
           date_created
         )
@@ -291,4 +296,12 @@ class CircleService {
       'invitations': invites,
     };
   }
+}
+
+String generateRandomCode(int length) {
+  const chars =
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  final random = Random();
+  return List.generate(length, (index) => chars[random.nextInt(chars.length)])
+      .join();
 }

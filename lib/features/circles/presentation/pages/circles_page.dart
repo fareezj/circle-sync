@@ -179,8 +179,7 @@ class _CirclesPageState extends ConsumerState<CirclesPage> {
               final circleName = nameController.text.trim();
               if (circleName.isNotEmpty) {
                 try {
-                  final circleId =
-                      await circleService.createCircle(circleName, []);
+                  final circleId = await circleService.createCircle(circleName);
                   Navigator.pop(context);
                   Navigator.pushNamed(
                     context,
@@ -222,22 +221,22 @@ class _CirclesPageState extends ConsumerState<CirclesPage> {
               },
               child: const Text('Go to Map'),
             ),
-            ElevatedButton(
-              onPressed: () async {
-                final user = _supabase.auth.currentUser;
-                if (user != null) {
-                  // Remove the member from the circle
-                  final circle = await circleService.getCircle(circleId);
-                  final updatedMembers = List<String>.from(circle.members)
-                    ..remove(user.id);
-                  await _supabase.from('circles').update(
-                      {'members': updatedMembers}).eq('circle_id', circleId);
-                  Navigator.pop(context);
-                  setState(() {});
-                }
-              },
-              child: const Text('Leave Circle'),
-            ),
+            // ElevatedButton(
+            //   onPressed: () async {
+            //     final user = _supabase.auth.currentUser;
+            //     if (user != null) {
+            //       // Remove the member from the circle
+            //       final circle = await circleService.getCircle(circleId);
+            //       final updatedMembers = List<String>.from(circle.members)
+            //         ..remove(user.id);
+            //       await _supabase.from('circles').update(
+            //           {'members': updatedMembers}).eq('circle_id', circleId);
+            //       Navigator.pop(context);
+            //       setState(() {});
+            //     }
+            //   },
+            //   child: const Text('Leave Circle'),
+            // ),
           ],
         ),
       ),

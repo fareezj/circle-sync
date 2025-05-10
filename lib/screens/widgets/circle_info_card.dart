@@ -1,12 +1,18 @@
+import 'package:circle_sync/features/map/presentation/pages/widgets/circle_list_sheet.dart';
+import 'package:circle_sync/models/circle_model.dart';
 import 'package:flutter/material.dart';
 
 class CircleInfoCard extends StatelessWidget {
   final bool hasCircle;
   final String? circleName;
+  List<CircleModel> circleList;
+  final Function(String) onCircleTap;
   final VoidCallback onCreateCircle;
 
-  const CircleInfoCard({
+  CircleInfoCard({
     super.key,
+    required this.onCircleTap,
+    required this.circleList,
     required this.hasCircle,
     required this.circleName,
     required this.onCreateCircle,
@@ -44,16 +50,28 @@ class CircleInfoCard extends StatelessWidget {
 
     if (circleName == null) return const SizedBox.shrink();
 
-    return Positioned(
-      top: 16,
-      left: 16,
-      child: Card(
-        color: Colors.white.withOpacity(0.9),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Text(
-            circleName!,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+    return GestureDetector(
+      onTap: () {
+        showModalBottomSheet(
+          context: context,
+          builder: (_) => CircleListSheet(
+            circleList: circleList,
+            onCircleTap: (p0) => onCircleTap(p0),
+          ),
+        );
+      },
+      child: Positioned(
+        top: 16,
+        left: 16,
+        child: Card(
+          color: Colors.white.withOpacity(0.9),
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Text(
+              circleName!,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
           ),
         ),
       ),

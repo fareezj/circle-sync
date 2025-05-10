@@ -3,14 +3,12 @@ class CircleModel {
   final String name;
   final String createdBy;
   final DateTime dateCreated;
-  final List<String> members;
 
   CircleModel({
     required this.id,
     required this.name,
     required this.createdBy,
     required this.dateCreated,
-    required this.members,
   });
 
   /// Converts this model into a Map suitable for inserting/updating Supabase.
@@ -20,7 +18,6 @@ class CircleModel {
       'name': name,
       'created_by': createdBy,
       'date_created': dateCreated.toUtc().toIso8601String(),
-      'members': members,
     };
   }
 
@@ -32,7 +29,6 @@ class CircleModel {
       name: map['name'] as String,
       createdBy: map['created_by'] as String,
       dateCreated: DateTime.parse(map['date_created'] as String),
-      members: List<String>.from(map['members'] as List<dynamic>),
     );
   }
 }

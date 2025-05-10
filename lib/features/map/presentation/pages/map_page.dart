@@ -1,12 +1,13 @@
 import 'package:circle_sync/features/circles/data/models/circle_model.dart';
 import 'package:circle_sync/features/map/data/models/map_models.dart';
+import 'package:circle_sync/features/map/presentation/pages/widgets/add_circle_sheet.dart';
 import 'package:circle_sync/features/map/presentation/widgets/add_place_bottom_sheet.dart';
 import 'package:circle_sync/features/map/presentation/widgets/places_bottom_sheet.dart';
+import 'package:circle_sync/models/circle_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:circle_sync/models/circle_model.dart';
 import 'package:circle_sync/models/map_state_model.dart';
 import 'package:circle_sync/screens/widgets/circle_info_card.dart';
 import 'package:circle_sync/screens/widgets/create_circle_dialog.dart';
@@ -35,11 +36,12 @@ class _MapPageState extends ConsumerState<MapPage> {
   final RouteService _routeService = RouteService();
 
   late MapState _mapState;
-  bool _useSimulation = true;
+  bool _useSimulation = false;
   String? _currentCircleId;
   bool _hasCircle = false;
+  final List<CircleModel> _joinedCircles = [];
   String? _circleName;
-  final List<CircleMembersModel> _circleMembers = [];
+  List<CircleMembersModel> _circleMembers = [];
   bool _isSharingLocation = true;
   LatLng? _selectedPlace;
 
@@ -52,14 +54,19 @@ class _MapPageState extends ConsumerState<MapPage> {
   }
 
   Future<void> _loadInitialCircle() async {
-    final info = await _circleService.getCircleInfo();
-    final joined = info['joinedCircles'] as List<CircleModel>;
-    final firstId =
-        widget.circleId ?? (joined.isNotEmpty ? joined[0].id : null);
-    await _loadCircleDetails(firstId);
-    if (firstId != null) {
-      await ref.read(mapNotiferProvider.notifier).getPlaces(firstId);
+    final circles = await _circleService.getJoinedCircles();
+    _joinedCircles.addAll(circles);
+    final circleId =
+        widget.circleId ?? (circles.isNotEmpty ? circles[0].id : null);
+    await _loadCircleDetails(circleId);
+    if (circleId != null) {
+      await ref.read(mapNotiferProvider.notifier).getPlaces(circleId);
     }
+  }
+
+  Future<void> loadNewCircle(String circleId) async {
+    await _loadCircleDetails(circleId);
+    await ref.read(mapNotiferProvider.notifier).getPlaces(circleId);
   }
 
   Future<void> _loadCircleDetails(String? circleId) async {
@@ -75,7 +82,7 @@ class _MapPageState extends ConsumerState<MapPage> {
         _currentCircleId = circleId;
         _hasCircle = true;
         _circleName = circle.name;
-        // _circleMembers = members;
+        _circleMembers = members;
       });
 
       await _locationService.startForegroundTask();
@@ -138,7 +145,7 @@ class _MapPageState extends ConsumerState<MapPage> {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
     try {
-      final newId = await _circleService.createCircle(name, []);
+      final newId = await _circleService.createCircle(name);
       await _loadCircleDetails(newId);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -179,6 +186,19 @@ class _MapPageState extends ConsumerState<MapPage> {
   void _recenterMap() {
     final loc = _mapState.currentLocation;
     if (loc != null) mapController.move(loc, 13.0);
+  }
+
+  void _showAddCircleSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) {
+        return const AddCircleSheet();
+      },
+    );
   }
 
   void _showMembersSheet() {
@@ -295,8 +315,14 @@ class _MapPageState extends ConsumerState<MapPage> {
                   },
                 ),
                 CircleInfoCard(
+                  circleList: _joinedCircles,
                   hasCircle: _hasCircle,
                   circleName: _circleName,
+                  onCircleTap: (p0) {
+                    Navigator.pop(context);
+                    loadNewCircle(p0);
+                    _recenterMap();
+                  },
                   onCreateCircle: () {
                     createCircleDialog(context, _createCircleAndJoin);
                   },
@@ -306,6 +332,12 @@ class _MapPageState extends ConsumerState<MapPage> {
       floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
+          FloatingActionButton(
+            onPressed: _showAddCircleSheet,
+            tooltip: 'Add new circle',
+            child: const Icon(Icons.add_circle),
+          ),
+          const SizedBox(height: 10),
           if (_hasCircle)
             FloatingActionButton(
               onPressed: _showMembersSheet,
@@ -318,11 +350,13 @@ class _MapPageState extends ConsumerState<MapPage> {
             tooltip: 'Places',
             child: const Icon(Icons.location_city),
           ),
+          const SizedBox(height: 10),
           FloatingActionButton(
             onPressed: _showAddPlaceSheet,
             tooltip: 'Add a Place',
             child: const Icon(Icons.add_location_alt),
           ),
+          const SizedBox(height: 10),
           FloatingActionButton(
             onPressed: () {
               if (_currentCircleId != null) {
