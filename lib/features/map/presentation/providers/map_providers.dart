@@ -3,11 +3,14 @@ import 'package:circle_sync/features/map/data/models/map_models.dart';
 import 'package:circle_sync/features/map/data/models/map_state.dart';
 import 'package:circle_sync/features/map/domain/usecases/map_usecase.dart';
 import 'package:circle_sync/models/circle_model.dart';
+import 'package:circle_sync/services/location_fg.dart';
 import 'package:circle_sync/services/location_service.dart';
+import 'package:circle_sync/services/permissions.dart';
 import 'package:circle_sync/services/route_service.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class MapNotifier extends StateNotifier<MapPageState> {
   final Ref ref;
@@ -24,6 +27,29 @@ class MapNotifier extends StateNotifier<MapPageState> {
 
   void updateSelectedPlace(LatLng place) {
     state = state.copyWith(selectedPlace: place);
+  }
+
+  Future<void> startForegroundTask() async {
+    bool hasPermissions = await Permissions.requestLocationPermissions();
+    if (hasPermissions) {
+      final userId = Supabase.instance.client.auth.currentUser!.id;
+
+      try {
+        final resp =
+            await Supabase.instance.client.from('circles').select('circle_id');
+
+        final circleIds =
+            (resp as List).map((r) => r['circle_id'] as String).toList();
+
+        await LocationTask.initForegroundTask();
+        await LocationTask.startForegroundTask(
+          userId: userId,
+          circleIds: circleIds,
+        );
+      } catch (e) {
+        print('error: $e');
+      }
+    } else {}
   }
 
   Future<CircleModel?> loadInitialCircle() async {

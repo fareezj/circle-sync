@@ -47,6 +47,7 @@ class _MapPageState extends ConsumerState<MapPage> {
             .read(mapNotiferProvider.notifier)
             .loadCircleDetails(circle, _mapController);
       });
+      ref.read(mapNotiferProvider.notifier).startForegroundTask();
     });
   }
 

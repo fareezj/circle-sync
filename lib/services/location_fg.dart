@@ -82,6 +82,8 @@ class LocationTaskHandler extends TaskHandler {
 
   @override
   Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
+    print('on start foreground task');
+
     // 1) Retrieve the persisted userId
     _userId = await FlutterForegroundTask.getData<String>(key: 'userId') ?? '';
     if (_userId.isEmpty) {
@@ -92,10 +94,8 @@ class LocationTaskHandler extends TaskHandler {
     // 2) Fetch circleIds from Supabase instead of saved data
     try {
       // Filter on the JSONB/array 'members' column
-      final response = await Supabase.instance.client
-          .from('circles')
-          .select('circle_id')
-          .contains('members', '["$_userId"]');
+      final response =
+          await Supabase.instance.client.from('circles').select('circle_id');
       print('awow: $response');
 
       // Cast and extract the IDs
