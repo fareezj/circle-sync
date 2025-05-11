@@ -24,8 +24,13 @@ class MapPage extends ConsumerStatefulWidget {
 }
 
 class _MapPageState extends ConsumerState<MapPage> {
-  final MapController mapController = MapController();
+  final MapController _mapController = MapController();
   final LocationService _locationService = LocationService();
+  final DraggableScrollableController _scrollableController =
+      DraggableScrollableController();
+  final PageController _pageController = PageController();
+
+  int _selectedFeatureIndex = 0; // 0: Info, 1: Members, 2: Places/Add
 
   @override
   void initState() {
@@ -40,7 +45,7 @@ class _MapPageState extends ConsumerState<MapPage> {
           .then((circle) async {
         await ref
             .read(mapNotiferProvider.notifier)
-            .loadCircleDetails(circle, mapController);
+            .loadCircleDetails(circle, _mapController);
       });
     });
   }
@@ -48,26 +53,13 @@ class _MapPageState extends ConsumerState<MapPage> {
   Future<void> loadNewCircle(CircleModel circle) async {
     await ref
         .read(mapNotiferProvider.notifier)
-        .loadCircleDetails(circle, mapController);
+        .loadCircleDetails(circle, _mapController);
     await ref.read(mapNotiferProvider.notifier).getPlaces(circle.id);
   }
 
-  // Future<void> _createCircleAndJoin(String name) async {
-  //   final uid = FirebaseAuth.instance.currentUser?.uid;
-  //   if (uid == null) return;
-  //   try {
-  //     final newId = await _circleService.createCircle(name);
-  //     await _loadCircleDetails(newId);
-  //   } catch (e) {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       const SnackBar(content: Text('Failed to create circle')),
-  //     );
-  //   }
-  // }
-
   void _recenterMap() {
     final loc = ref.read(mapNotiferProvider).currentLocation;
-    if (loc != null) mapController.move(loc, 13.0);
+    if (loc != null) _mapController.move(loc, 13.0);
   }
 
   void _showAddCircleSheet() {
@@ -77,148 +69,165 @@ class _MapPageState extends ConsumerState<MapPage> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (_) {
-        return const AddCircleSheet();
-      },
-    );
-  }
-
-  void _showMembersSheet() {
-    final mapPageProvider = ref.watch(mapNotiferProvider);
-    showModalBottomSheet(
-      context: context,
-      builder: (_) => MembersBottomSheet(
-        members: mapPageProvider.circleMembers,
-        circleId: mapPageProvider.currentCircleId,
-        otherUsersLocations: mapPageProvider.otherUsersLocations,
-        onMemberSelected: (memberId) {
-          final loc = mapPageProvider.otherUsersLocations[memberId];
-          if (loc != null) mapController.move(loc, 13.0);
-        },
-        onMemberAdded: (newId) {
-          // setState(() {
-          //   _circleMembers.add(newId);
-          // });
-        },
-      ),
-    );
-  }
-
-  void _showPlacesSheet(List<PlacesModel> placeList) {
-    final mapPageProvider = ref.watch(mapNotiferProvider);
-    showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        shape: const RoundedRectangleBorder(
-          // optional: round the top corners
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-        ),
-        builder: (_) {
-          final height = MediaQuery.of(context).size.height * 0.95;
-          return SizedBox(
-            height: height,
-            child: PlacesBottomSheet(
-                placeList: placeList,
-                onClickAddPlace: () {
-                  Navigator.pop(context);
-                  _showAddPlaceSheet();
-                },
-                onClickPlace: (loc) {
-                  Navigator.pop(context);
-                  ref
-                      .read(mapNotiferProvider.notifier)
-                      .updateSelectedPlace(loc);
-                  mapController.move(loc, 13.0);
-                }),
-          );
-        });
-  }
-
-  void _showAddPlaceSheet() {
-    final mapPageProvider = ref.watch(mapNotiferProvider);
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (_) {
-        // pass in the current center so the map isn’t centered on (0,0)
-        final center = mapPageProvider.currentLocation!;
-        return AddPlaceBottomSheet(
-          initialCenter: center,
-          onSave: (location, title) async {
-            // 1) call your provider/service to persist
-            await ref.read(mapNotiferProvider.notifier).insertPlace(
-                  PlacesModel(
-                    geofenceId: UuidV4().generate(),
-                    circleId: mapPageProvider.currentCircleId ?? '',
-                    centerGeography:
-                        'POINT(${location.latitude.toStringAsFixed(4)} ${location.longitude.toStringAsFixed(4)})',
-                    radiusM: 500,
-                    title: title,
-                    message: 'You are now at $title vicinity',
-                  ),
-                );
-
-            // 2) refresh your places
-            await ref
-                .read(mapNotiferProvider.notifier)
-                .getPlaces(mapPageProvider.currentCircleId);
-
-            // 3) close the sheet
-            Navigator.pop(context);
-          },
-        );
-      },
+      builder: (_) => const AddCircleSheet(),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final mapPageProvider = ref.watch(mapNotiferProvider);
+    final mapState = ref.watch(mapNotiferProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Map View')),
-      body: mapPageProvider.currentLocation == null
+      body: mapState.currentLocation == null
           ? const Center(child: CircularProgressIndicator())
           : Stack(
               children: [
                 MapWidget(
-                  mapController: mapController,
+                  mapController: _mapController,
                   mapState: MapState(
-                    currentLocation:
-                        ref.watch(mapNotiferProvider).currentLocation,
-                    osrmRoutePoints:
-                        ref.watch(mapNotiferProvider).osrmRoutePoints,
-                    trackingPoints:
-                        ref.watch(mapNotiferProvider).trackingPoints,
-                    otherUsersLocations:
-                        ref.watch(mapNotiferProvider).otherUsersLocations,
+                    currentLocation: mapState.currentLocation,
+                    osrmRoutePoints: mapState.osrmRoutePoints,
+                    trackingPoints: mapState.trackingPoints,
+                    otherUsersLocations: mapState.otherUsersLocations,
                   ),
-                  hasCircle: mapPageProvider.hasCircle,
-                  selectedPlace: mapPageProvider.selectedPlace,
+                  hasCircle: mapState.hasCircle,
+                  selectedPlace: mapState.selectedPlace,
                   onCurrentLocationTap: () {
                     showCurrentUserInfoDialog(
-                        context, mapPageProvider.currentLocation!);
+                        context, mapState.currentLocation!);
                   },
                   onOtherUserTap: (userId, loc) {
                     showUserInfoDialog(context, userId, loc);
                   },
-                  places: mapPageProvider.placeList,
+                  places: mapState.placeList,
                 ),
-                CircleInfoCard(
-                  circleList: mapPageProvider.joinedCircles,
-                  hasCircle: mapPageProvider.hasCircle,
-                  circleName: mapPageProvider.circleName,
-                  onCircleTap: (p0) {
-                    Navigator.pop(context);
-                    loadNewCircle(p0);
-                    _recenterMap();
-                  },
-                  onCreateCircle: () {
-                    //createCircleDialog(context, _createCircleAndJoin);
+
+                // draggable & scrollable sheet
+                DraggableScrollableSheet(
+                  controller: _scrollableController,
+                  initialChildSize: 0.8,
+                  minChildSize: 0.2,
+                  maxChildSize: 1.0,
+                  builder: (context, scrollController) {
+                    return Container(
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        borderRadius:
+                            BorderRadius.vertical(top: Radius.circular(16)),
+                      ),
+                      child: ListView(
+                        controller: scrollController,
+                        padding: EdgeInsets.zero,
+                        children: [
+                          const Divider(),
+                          Padding(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 8.0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                _buildTabChip(
+                                    label: 'Circle Info',
+                                    index: 0,
+                                    context: context),
+                                _buildTabChip(
+                                    label: 'View Members',
+                                    index: 1,
+                                    context: context),
+                                _buildTabChip(
+                                    label: 'Places',
+                                    index: 2,
+                                    context: context),
+                              ],
+                            ),
+                          ),
+                          // fixed-height PageView inside the ListView
+                          SizedBox(
+                            height: MediaQuery.of(context).size.height * 0.7,
+                            child: PageView(
+                              controller: _pageController,
+                              onPageChanged: (i) =>
+                                  setState(() => _selectedFeatureIndex = i),
+                              children: [
+                                CircleInfoCard(
+                                  circleList: mapState.joinedCircles,
+                                  hasCircle: mapState.hasCircle,
+                                  circleName: mapState.circleName,
+                                  onCircleTap: (c) {
+                                    loadNewCircle(c);
+                                    _recenterMap();
+                                  },
+                                  onCreateCircle: () {},
+                                ),
+                                MembersBottomSheet(
+                                  members: mapState.circleMembers,
+                                  circleId: mapState.currentCircleId,
+                                  otherUsersLocations:
+                                      mapState.otherUsersLocations,
+                                  onMemberSelected: (memberId) {
+                                    final loc =
+                                        mapState.otherUsersLocations[memberId];
+                                    if (loc != null) {
+                                      _mapController.move(loc, 13.0);
+                                    }
+                                  },
+                                  onMemberAdded: (newId) {},
+                                ),
+                                // either add-place or list-places
+                                _selectedFeatureIndex == 2
+                                    ? PlacesBottomSheet(
+                                        placeList: mapState.placeList,
+                                        onClickAddPlace: () {
+                                          setState(() {
+                                            _selectedFeatureIndex = 3;
+                                          });
+                                          _pageController.jumpToPage(2);
+                                        },
+                                        onClickPlace: (loc) {
+                                          ref
+                                              .read(mapNotiferProvider.notifier)
+                                              .updateSelectedPlace(loc);
+                                          _mapController.move(loc, 13.0);
+                                        },
+                                      )
+                                    : AddPlaceBottomSheet(
+                                        initialCenter:
+                                            mapState.currentLocation!,
+                                        onSave: (location, title) async {
+                                          await ref
+                                              .read(mapNotiferProvider.notifier)
+                                              .insertPlace(
+                                                PlacesModel(
+                                                  geofenceId:
+                                                      UuidV4().generate(),
+                                                  circleId: mapState
+                                                          .currentCircleId ??
+                                                      '',
+                                                  centerGeography:
+                                                      'POINT(${location.latitude.toStringAsFixed(4)} ${location.longitude.toStringAsFixed(4)})',
+                                                  radiusM: 500,
+                                                  title: title,
+                                                  message:
+                                                      'You are now at $title vicinity',
+                                                ),
+                                              );
+                                          await ref
+                                              .read(mapNotiferProvider.notifier)
+                                              .getPlaces(
+                                                  mapState.currentCircleId);
+                                          setState(() {
+                                            _selectedFeatureIndex = 2;
+                                          });
+                                          _pageController.jumpToPage(2);
+                                        },
+                                      ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
                   },
                 ),
               ],
@@ -232,70 +241,38 @@ class _MapPageState extends ConsumerState<MapPage> {
             child: const Icon(Icons.add_circle),
           ),
           const SizedBox(height: 10),
-          if (mapPageProvider.hasCircle)
+          if (mapState.hasCircle)
             FloatingActionButton(
-              onPressed: _showMembersSheet,
-              tooltip: 'View Members',
-              child: const Icon(Icons.group),
+              onPressed: _recenterMap,
+              tooltip: 'Recenter',
+              child: const Icon(Icons.center_focus_strong),
             ),
-          const SizedBox(height: 10),
-          FloatingActionButton(
-            onPressed: () => _showPlacesSheet(mapPageProvider.placeList),
-            tooltip: 'Places',
-            child: const Icon(Icons.location_city),
-          ),
-          const SizedBox(height: 10),
-          FloatingActionButton(
-            onPressed: _showAddPlaceSheet,
-            tooltip: 'Add a Place',
-            child: const Icon(Icons.add_location_alt),
-          ),
-          const SizedBox(height: 10),
-          FloatingActionButton(
-            onPressed: () {
-              final isSharingLocation = mapPageProvider.isSharingLocation;
-              if (isSharingLocation) {
-                _locationService.pauseLocationSharing(
-                    mapPageProvider.currentCircleId,
-                    mapPageProvider.currentLocation);
-              } else {
-                _locationService.resumeLocationSharing(
-                    mapPageProvider.currentCircleId,
-                    mapPageProvider.currentLocation);
-              }
-              ref
-                  .read(mapNotiferProvider.notifier)
-                  .updateLocationSharing(!isSharingLocation);
-            },
-            tooltip: mapPageProvider.isSharingLocation
-                ? 'Pause Sharing'
-                : 'Resume Sharing',
-            child: Icon(mapPageProvider.isSharingLocation
-                ? Icons.gps_off
-                : Icons.gps_fixed),
-          ),
-          const SizedBox(height: 10),
-          FloatingActionButton(
-            onPressed: () {
-              final toggle = !mapPageProvider.useSimulation;
-              ref.read(mapNotiferProvider.notifier).toggleSimulation(toggle);
-              ref
-                  .read(mapNotiferProvider.notifier)
-                  .subscribeToLocationUpdates();
-            },
-            tooltip:
-                mapPageProvider.useSimulation ? 'Real Location' : 'Simulation',
-            child: Icon(mapPageProvider.useSimulation
-                ? Icons.location_on
-                : Icons.location_off),
-          ),
-          const SizedBox(height: 10),
-          FloatingActionButton(
-            onPressed: _recenterMap,
-            tooltip: 'Recenter',
-            child: const Icon(Icons.center_focus_strong),
-          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTabChip({
+    required String label,
+    required int index,
+    required BuildContext context,
+  }) {
+    final isSelected = _selectedFeatureIndex == index;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedFeatureIndex = index;
+        });
+        _pageController.animateToPage(
+          index,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      },
+      child: Chip(
+        label: Text(label),
+        backgroundColor: isSelected ? Theme.of(context).primaryColor : null,
+        labelStyle: TextStyle(color: isSelected ? Colors.white : null),
       ),
     );
   }
@@ -303,6 +280,8 @@ class _MapPageState extends ConsumerState<MapPage> {
   @override
   void dispose() {
     _locationService.dispose();
+    _scrollableController.dispose();
+    _pageController.dispose();
     super.dispose();
   }
 }

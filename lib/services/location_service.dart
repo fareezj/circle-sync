@@ -11,7 +11,7 @@ class LocationService {
   final SupabaseClient _supabase = Supabase.instance.client;
   StreamSubscription<Position>? _positionStreamSubscription;
   StreamSubscription<List<Map<String, dynamic>>>? _realtimeSubscription;
-  bool _useSimulation = true;
+  bool _useSimulation = false;
   bool _isLocationSharing = true;
 
   /// Expose sharing state
