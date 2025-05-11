@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
@@ -65,14 +66,15 @@ class LocationService {
 
     LatLng current;
     LatLng destination;
+
     if (!_useSimulation) {
       var pos = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high);
       current = LatLng(pos.latitude, pos.longitude);
       destination = LatLng(pos.latitude + 0.01, pos.longitude + 0.01);
     } else {
-      current = LatLng(37.7749, -122.4194);
-      destination = LatLng(37.7849, -122.4094);
+      current = LatLng(3.0625016, 101.6682533);
+      destination = LatLng(3.0725016, 101.6982533);
     }
 
     onLocationAndRouteUpdate(current, destination, [current]);
@@ -80,8 +82,8 @@ class LocationService {
 
   /// Simulated circular movement
   Stream<Position> _simulatePositionStream() async* {
-    double lat = 37.7749;
-    double lng = -122.4194;
+    double lat = 3.0625016;
+    double lng = 101.6682533;
     int step = 0;
 
     while (true) {
@@ -112,7 +114,7 @@ class LocationService {
     required bool useSimulation,
     required Function(LatLng, List<LatLng>) onLocationUpdate,
   }) async {
-    print('here1');
+    print('useSimulation: $useSimulation');
     _useSimulation = useSimulation;
     await _positionStreamSubscription?.cancel();
 
@@ -131,6 +133,7 @@ class LocationService {
           );
 
     _positionStreamSubscription = posStream.listen((pos) async {
+      print('Position update: ${pos.latitude}, ${pos.longitude}');
       final updated = LatLng(pos.latitude, pos.longitude);
       onLocationUpdate(updated, [updated]);
 
@@ -189,6 +192,7 @@ class LocationService {
               (row['lng'] as num).toDouble(),
             );
           }
+          print('Updated locations: $updated');
           onLocationsUpdate(updated);
         });
   }

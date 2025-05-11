@@ -104,8 +104,11 @@ class MapNotifier extends StateNotifier<MapPageState> {
       circleId: state.currentCircleId,
       useSimulation: state.useSimulation,
       onLocationUpdate: (loc, points) {
+        print('Location update: $loc');
+        print('Points update: $points');
         state = state.copyWith(
           currentLocation: loc,
+          osrmRoutePoints: points,
           trackingPoints: [...state.trackingPoints, ...points],
         );
       },
@@ -116,7 +119,8 @@ class MapNotifier extends StateNotifier<MapPageState> {
     _locationService.subscribeToOtherUsersLocations(
       circleId: state.currentCircleId,
       onLocationsUpdate: (others) {
-        state.copyWith(otherUsersLocations: others);
+        print('Other users locations now1: $others');
+        state = state.copyWith(otherUsersLocations: others);
       },
     );
   }
@@ -167,6 +171,8 @@ class MapNotifier extends StateNotifier<MapPageState> {
       // mapController.move(state.currentLocation!, 13.0);
     }
   }
+
+  void toggleSimulation(bool toggleSimulation) {}
 }
 
 final mapNotiferProvider =

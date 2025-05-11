@@ -38,8 +38,7 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
   @override
   void initState() {
     super.initState();
-    _buildMarkers();
-    _buildPolylines();
+    WidgetsBinding.instance.addPostFrameCallback((_) {});
   }
 
   void _buildMarkers() {
@@ -102,6 +101,7 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
 
     // Other users' markers
     widget.mapState.otherUsersLocations.forEach((userId, loc) {
+      print('Other user location: $userId, $loc');
       markers.add(
         Marker(
           point: loc,
@@ -133,24 +133,39 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
     }
   }
 
-  void _buildPolylines() {
+  void _buildPolylines(
+      List<LatLng> trackingPoints, List<LatLng> osrmRoutePoints) {
     polylines = <Polyline>[];
 
-    if (widget.mapState.osrmRoutePoints.isNotEmpty) {
-      polylines.add(
-        Polyline(points: widget.mapState.osrmRoutePoints, strokeWidth: 4),
-      );
+    if (osrmRoutePoints.isNotEmpty) {
+      setState(() {
+        polylines.add(
+          Polyline(
+            points: osrmRoutePoints,
+            strokeWidth: 4,
+            color: Colors.blue,
+          ),
+        );
+      });
     }
-
-    if (widget.mapState.trackingPoints.isNotEmpty) {
-      polylines.add(
-        Polyline(points: widget.mapState.trackingPoints, strokeWidth: 2),
-      );
+    if (trackingPoints.isNotEmpty) {
+      setState(() {
+        polylines.add(
+          Polyline(
+            points: trackingPoints,
+            strokeWidth: 2,
+            color: Colors.red,
+          ),
+        );
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    _buildMarkers();
+    _buildPolylines(ref.watch(mapNotiferProvider).trackingPoints,
+        ref.watch(mapNotiferProvider).osrmRoutePoints);
     return FlutterMap(
       mapController: widget.mapController,
       options: MapOptions(

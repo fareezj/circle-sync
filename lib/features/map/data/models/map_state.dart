@@ -23,7 +23,7 @@ class MapPageState {
   MapPageState({
     required this.isLoading,
     required this.placeList,
-    this.useSimulation = false,
+    this.useSimulation = true,
     this.currentCircleId = '',
     this.hasCircle = false,
     this.joinedCircles = const [],

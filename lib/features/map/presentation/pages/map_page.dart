@@ -188,10 +188,14 @@ class _MapPageState extends ConsumerState<MapPage> {
                 MapWidget(
                   mapController: mapController,
                   mapState: MapState(
-                    currentLocation: mapPageProvider.currentLocation,
-                    osrmRoutePoints: mapPageProvider.osrmRoutePoints,
-                    trackingPoints: mapPageProvider.trackingPoints,
-                    otherUsersLocations: mapPageProvider.otherUsersLocations,
+                    currentLocation:
+                        ref.watch(mapNotiferProvider).currentLocation,
+                    osrmRoutePoints:
+                        ref.watch(mapNotiferProvider).osrmRoutePoints,
+                    trackingPoints:
+                        ref.watch(mapNotiferProvider).trackingPoints,
+                    otherUsersLocations:
+                        ref.watch(mapNotiferProvider).otherUsersLocations,
                   ),
                   hasCircle: mapPageProvider.hasCircle,
                   selectedPlace: mapPageProvider.selectedPlace,
@@ -273,8 +277,11 @@ class _MapPageState extends ConsumerState<MapPage> {
           const SizedBox(height: 10),
           FloatingActionButton(
             onPressed: () {
-              //setState(() => _useSimulation = !_useSimulation);
-              // _subscribeToLocationUpdates();
+              final toggle = !mapPageProvider.useSimulation;
+              ref.read(mapNotiferProvider.notifier).toggleSimulation(toggle);
+              ref
+                  .read(mapNotiferProvider.notifier)
+                  .subscribeToLocationUpdates();
             },
             tooltip:
                 mapPageProvider.useSimulation ? 'Real Location' : 'Simulation',
