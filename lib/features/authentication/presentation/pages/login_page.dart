@@ -60,11 +60,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       //   // non‑fatal: just log it
       //   print('Failed to update OneSignal ID: ${updateRes.error!.message}');
       // }
-    }
 
-    // 4) Persist login flag in secure storage
-    final secureStorage = ref.read(secureStorageServiceProvider);
-    await secureStorage.writeData('isLoggedIn', 'true');
+      // 4) Persist login flag in secure storage
+      final secureStorage = ref.read(secureStorageServiceProvider);
+      await secureStorage.writeData('isLoggedIn', 'true');
+      await secureStorage.writeData('name', updateRes[0]['name']);
+      await secureStorage.writeData('email', email);
+      await secureStorage.writeData('userId', userId);
+      await secureStorage.writeData('onesignalId', playerId);
+    }
+    final name = await ref.read(getUsernameProvider.future);
+    print('GET NAME: $name');
 
     // 5) Navigate to main page
     setState(() => _isLoading = false);

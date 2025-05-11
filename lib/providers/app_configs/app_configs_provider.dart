@@ -34,7 +34,6 @@ final getPasswordProvider = secureStorageDataProvider('password');
 final getLoginTokenProvider = secureStorageDataProvider('loginToken');
 final getFullNameProvider = secureStorageDataProvider('fullName');
 final getIcNumberProvider = secureStorageDataProvider('idNumber');
-final getEmailProvider = secureStorageDataProvider('email');
 final getMydidSessionId = secureStorageDataProvider('sessionId');
 final getLatitudeProvider = secureStorageDataProvider('currentLat');
 final getAccountBalanceProvider = secureStorageDataProvider('accountBalance');
@@ -44,6 +43,11 @@ final getOnfidoSDKToken = secureStorageDataProvider('onfidoSDKToken');
 final getUserPinProvider = secureStorageDataProvider('userPin');
 final getSpentLimitDailyProvider = secureStorageDataProvider('spentLimitDaily');
 final getIsLoggedInProvider = secureStorageDataProvider('isLoggedIn');
+
+final getUsernameProvider = secureStorageDataProvider('name');
+final getEmailProvider = secureStorageDataProvider('email');
+final getUserIdProvider = secureStorageDataProvider('userId');
+final getOneSignalIdProvider = secureStorageDataProvider('oneSignalId');
 
 // Global message notifier remains unchanged.
 class GlobalMessageNotifier extends StateNotifier<String?> {
