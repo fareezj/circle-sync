@@ -88,6 +88,7 @@ class _MapPageState extends ConsumerState<MapPage> {
               children: [
                 MapWidget(
                   mapController: _mapController,
+                  members: mapState.circleMembers,
                   mapState: MapState(
                     currentLocation: mapState.currentLocation,
                     osrmRoutePoints: mapState.osrmRoutePoints,
@@ -104,6 +105,7 @@ class _MapPageState extends ConsumerState<MapPage> {
                     showUserInfoDialog(context, userId, loc);
                   },
                   places: mapState.placeList,
+                  //showPlaceTooltip: true,
                 ),
                 SafeArea(
                   child: CircleInfoCard(

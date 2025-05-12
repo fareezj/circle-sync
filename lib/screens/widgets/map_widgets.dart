@@ -1,5 +1,8 @@
+import 'package:circle_sync/features/circles/data/models/circle_model.dart';
 import 'package:circle_sync/features/map/data/models/map_models.dart';
 import 'package:circle_sync/features/map/presentation/providers/map_providers.dart';
+import 'package:circle_sync/screens/widgets/member_marker.dart';
+import 'package:circle_sync/screens/widgets/place_marker.dart';
 import 'package:circle_sync/utils/coordinate_extractor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -12,6 +15,7 @@ class MapWidget extends ConsumerStatefulWidget {
   final MapState mapState;
   final bool hasCircle;
   final LatLng? selectedPlace;
+  final List<CircleMembersModel>? members;
   final VoidCallback onCurrentLocationTap;
   final List<PlacesModel>? places;
   final void Function(String userId, LatLng location) onOtherUserTap;
@@ -19,6 +23,7 @@ class MapWidget extends ConsumerStatefulWidget {
   const MapWidget({
     super.key,
     this.places,
+    required this.members,
     required this.mapController,
     required this.mapState,
     required this.hasCircle,
@@ -73,26 +78,15 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
                 ref
                     .read(mapNotiferProvider.notifier)
                     .updateSelectedPlace(latLng);
-                widget.mapController.move(latLng, 13.0);
-
-                // Show place details
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: Text('Place Details'),
-                    content: Text(
-                        'You selected a place at ${latLng.latitude}, ${latLng.longitude}'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Close'),
-                      ),
-                    ],
-                  ),
-                );
               },
-              child:
-                  const Icon(Icons.location_on, color: Colors.blue, size: 32),
+              child: FittedBox(
+                fit: BoxFit.cover,
+                child: PlaceMarker(
+                  place: place,
+                  isSelected:
+                      ref.read(mapNotiferProvider).selectedPlace == latLng,
+                ),
+              ),
             ),
           ),
         );
@@ -101,16 +95,37 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
 
     // Other users' markers
     widget.mapState.otherUsersLocations.forEach((userId, loc) {
-      print('Other user location: $userId, $loc');
+      final members = widget.members ?? [];
+
+      // find all members matching this userId
+      final matches = members.where((u) => u.userId == userId);
+      if (matches.isEmpty) {
+        // no member in the list for this userId → skip
+        debugPrint('No member data for userId: $userId');
+        return;
+      }
+
+      final member = matches.first;
       markers.add(
         Marker(
           point: loc,
-          width: 36,
-          height: 36,
+          width: 40,
+          height: 40,
           child: GestureDetector(
-            onTap: () => widget.onOtherUserTap(userId, loc),
-            child: const Icon(Icons.person_pin_circle,
-                color: Colors.redAccent, size: 30),
+            onTap: () {
+              ref
+                  .read(mapNotiferProvider.notifier)
+                  .updateSelectedMember(member);
+            },
+            child: FittedBox(
+              fit: BoxFit.cover,
+              child: MemberMarker(
+                user: member,
+                isSelected:
+                    ref.read(mapNotiferProvider).selectedMember?.userId ==
+                        userId,
+              ),
+            ),
           ),
         ),
       );

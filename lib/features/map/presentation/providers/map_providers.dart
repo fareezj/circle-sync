@@ -1,3 +1,4 @@
+import 'package:circle_sync/features/circles/data/models/circle_model.dart';
 import 'package:circle_sync/features/circles/domain/usecases/circle_usecase.dart';
 import 'package:circle_sync/features/map/data/models/map_models.dart';
 import 'package:circle_sync/features/map/data/models/map_state.dart';
@@ -27,6 +28,10 @@ class MapNotifier extends StateNotifier<MapPageState> {
 
   void updateSelectedPlace(LatLng place) {
     state = state.copyWith(selectedPlace: place);
+  }
+
+  void updateSelectedMember(CircleMembersModel member) {
+    state = state.copyWith(selectedMember: member);
   }
 
   Future<void> startForegroundTask() async {

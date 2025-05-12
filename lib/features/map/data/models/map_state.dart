@@ -12,6 +12,7 @@ class MapPageState {
   final List<CircleModel> joinedCircles;
   final String? circleName;
   final List<CircleMembersModel> circleMembers;
+  final CircleMembersModel? selectedMember;
   final bool isSharingLocation;
   final LatLng? selectedPlace;
   final LatLng? currentLocation;
@@ -23,6 +24,7 @@ class MapPageState {
   MapPageState({
     required this.isLoading,
     required this.placeList,
+    this.selectedMember,
     this.useSimulation = false,
     this.currentCircleId = '',
     this.hasCircle = false,
@@ -67,6 +69,7 @@ class MapPageState {
     bool? hasCircle,
     String? circleName,
     List<CircleMembersModel>? circleMembers,
+    CircleMembersModel? selectedMember,
     bool? isSharingLocation,
     LatLng? selectedPlace,
     LatLng? currentLocation,
@@ -78,6 +81,7 @@ class MapPageState {
     return MapPageState(
       isLoading: isLoading ?? this.isLoading,
       placeList: placeList ?? this.placeList,
+      selectedMember: selectedMember ?? this.selectedMember,
       useSimulation: useSimulation ?? this.useSimulation,
       currentCircleId: currentCircleId ?? this.currentCircleId,
       hasCircle: hasCircle ?? this.hasCircle,
