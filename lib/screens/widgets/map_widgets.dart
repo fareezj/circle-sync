@@ -117,20 +117,20 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
     });
 
     // Selected place marker
-    if (widget.selectedPlace != null) {
-      markers.add(
-        Marker(
-          point: widget.selectedPlace!,
-          width: 40,
-          height: 40,
-          child: const Icon(
-            Icons.location_pin,
-            color: Colors.red,
-            size: 40,
-          ),
-        ),
-      );
-    }
+    // if (widget.selectedPlace != null) {
+    //   markers.add(
+    //     Marker(
+    //       point: widget.selectedPlace!,
+    //       width: 40,
+    //       height: 40,
+    //       child: const Icon(
+    //         Icons.location_pin,
+    //         color: Colors.red,
+    //         size: 40,
+    //       ),
+    //     ),
+    //   );
+    // }
   }
 
   void _buildPolylines(
@@ -182,19 +182,19 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
         if (polylines.isNotEmpty) PolylineLayer(polylines: polylines),
 
         // 1 km circle under the selected place pin
-        if (widget.selectedPlace != null)
-          CircleLayer(
-            circles: [
-              CircleMarker(
-                point: widget.selectedPlace!,
-                radius: 1000, // in meters
-                useRadiusInMeter: true,
-                color: Colors.blue.withOpacity(0.2),
-                borderColor: Colors.blue,
-                borderStrokeWidth: 2,
-              ),
-            ],
-          ),
+        // if (widget.selectedPlace != null)
+        //   CircleLayer(
+        //     circles: [
+        //       CircleMarker(
+        //         point: widget.selectedPlace!,
+        //         radius: 1000, // in meters
+        //         useRadiusInMeter: true,
+        //         color: Colors.blue.withOpacity(0.2),
+        //         borderColor: Colors.blue,
+        //         borderStrokeWidth: 2,
+        //       ),
+        //     ],
+        //   ),
 
         // All markers (current user, others, and place pins)
         MarkerLayer(markers: markers),

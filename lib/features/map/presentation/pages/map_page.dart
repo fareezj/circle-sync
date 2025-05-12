@@ -3,6 +3,8 @@ import 'package:circle_sync/features/map/presentation/pages/widgets/add_circle_s
 import 'package:circle_sync/features/map/presentation/widgets/add_place_bottom_sheet.dart';
 import 'package:circle_sync/features/map/presentation/widgets/places_bottom_sheet.dart';
 import 'package:circle_sync/models/circle_model.dart';
+import 'package:circle_sync/screens/widgets/circle_bottom_sheet.dart';
+import 'package:circle_sync/utils/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:circle_sync/models/map_state_model.dart';
@@ -79,10 +81,10 @@ class _MapPageState extends ConsumerState<MapPage> {
     final mapState = ref.watch(mapNotiferProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Map View')),
       body: mapState.currentLocation == null
           ? const Center(child: CircularProgressIndicator())
           : Stack(
+              alignment: Alignment.topCenter,
               children: [
                 MapWidget(
                   mapController: _mapController,
@@ -103,158 +105,184 @@ class _MapPageState extends ConsumerState<MapPage> {
                   },
                   places: mapState.placeList,
                 ),
-
+                SafeArea(
+                  child: CircleInfoCard(
+                    circleList: mapState.joinedCircles,
+                    hasCircle: mapState.hasCircle,
+                    circleName: mapState.circleName,
+                    onCircleTap: (c) {
+                      loadNewCircle(c);
+                      _recenterMap();
+                    },
+                    onCreateCircle: () {},
+                  ),
+                ),
                 // draggable & scrollable sheet
                 DraggableScrollableSheet(
                   controller: _scrollableController,
-                  initialChildSize: 0.8,
-                  minChildSize: 0.2,
+                  initialChildSize: 0.35,
+                  minChildSize: 0.35,
                   maxChildSize: 1.0,
                   builder: (context, scrollController) {
-                    return Container(
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        borderRadius:
-                            BorderRadius.vertical(top: Radius.circular(16)),
-                      ),
-                      child: ListView(
-                        controller: scrollController,
-                        padding: EdgeInsets.zero,
-                        children: [
-                          const Divider(),
-                          Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 8.0),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                _buildTabChip(
-                                    label: 'Circle Info',
-                                    index: 0,
-                                    context: context),
-                                _buildTabChip(
-                                    label: 'View Members',
-                                    index: 1,
-                                    context: context),
-                                _buildTabChip(
-                                    label: 'Places',
-                                    index: 2,
-                                    context: context),
-                              ],
-                            ),
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        // ElevatedButton(
+                        //   onPressed: _showAddCircleSheet,
+                        //   child: const Icon(Icons.add_circle),
+                        // ),
+                        const SizedBox(height: 10),
+                        if (mapState.hasCircle)
+                          ElevatedButton(
+                            onPressed: _recenterMap,
+                            child: const Icon(Icons.center_focus_strong),
                           ),
-                          // fixed-height PageView inside the ListView
-                          SizedBox(
-                            height: MediaQuery.of(context).size.height * 0.7,
-                            child: PageView(
-                              controller: _pageController,
-                              onPageChanged: (i) =>
-                                  setState(() => _selectedFeatureIndex = i),
+                        Expanded(
+                          child: Container(
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.vertical(
+                                  top: Radius.circular(16)),
+                            ),
+                            child: ListView(
+                              controller: scrollController,
+                              physics: ClampingScrollPhysics(),
+                              padding: EdgeInsets.zero,
                               children: [
-                                CircleInfoCard(
-                                  circleList: mapState.joinedCircles,
-                                  hasCircle: mapState.hasCircle,
-                                  circleName: mapState.circleName,
-                                  onCircleTap: (c) {
-                                    loadNewCircle(c);
-                                    _recenterMap();
-                                  },
-                                  onCreateCircle: () {},
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8.0, vertical: 24.0),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceEvenly,
+                                    children: [
+                                      _buildTabChip(
+                                          icon: Icons.info,
+                                          index: 0,
+                                          context: context),
+                                      _buildTabChip(
+                                          icon: Icons.group,
+                                          index: 1,
+                                          context: context),
+                                      _buildTabChip(
+                                          icon: Icons.place,
+                                          index: 2,
+                                          context: context),
+                                    ],
+                                  ),
                                 ),
-                                MembersBottomSheet(
-                                  members: mapState.circleMembers,
-                                  circleId: mapState.currentCircleId,
-                                  otherUsersLocations:
-                                      mapState.otherUsersLocations,
-                                  onMemberSelected: (memberId) {
-                                    final loc =
-                                        mapState.otherUsersLocations[memberId];
-                                    if (loc != null) {
-                                      _mapController.move(loc, 13.0);
-                                    }
-                                  },
-                                  onMemberAdded: (newId) {},
-                                ),
-                                // either add-place or list-places
-                                _selectedFeatureIndex == 2
-                                    ? PlacesBottomSheet(
-                                        placeList: mapState.placeList,
-                                        onClickAddPlace: () {
-                                          setState(() {
-                                            _selectedFeatureIndex = 3;
-                                          });
-                                          _pageController.jumpToPage(2);
+                                // fixed-height PageView inside the ListView
+                                SizedBox(
+                                  height:
+                                      MediaQuery.of(context).size.height * 0.7,
+                                  child: PageView(
+                                    controller: _pageController,
+                                    onPageChanged: (i) => setState(
+                                        () => _selectedFeatureIndex = i),
+                                    children: [
+                                      CircleBottomSheet(
+                                        members: mapState.circleMembers,
+                                        circle: mapState.joinedCircles
+                                            .where((e) =>
+                                                e.id ==
+                                                mapState.currentCircleId)
+                                            .first,
+                                        hasCircle: mapState.hasCircle,
+                                        onCircleTap: (c) {
+                                          loadNewCircle(c);
+                                          _recenterMap();
                                         },
-                                        onClickPlace: (loc) {
-                                          ref
-                                              .read(mapNotiferProvider.notifier)
-                                              .updateSelectedPlace(loc);
-                                          _mapController.move(loc, 13.0);
-                                        },
-                                      )
-                                    : AddPlaceBottomSheet(
-                                        initialCenter:
-                                            mapState.currentLocation!,
-                                        onSave: (location, title) async {
-                                          await ref
-                                              .read(mapNotiferProvider.notifier)
-                                              .insertPlace(
-                                                PlacesModel(
-                                                  geofenceId:
-                                                      UuidV4().generate(),
-                                                  circleId: mapState
-                                                          .currentCircleId ??
-                                                      '',
-                                                  centerGeography:
-                                                      'POINT(${location.latitude.toStringAsFixed(4)} ${location.longitude.toStringAsFixed(4)})',
-                                                  radiusM: 500,
-                                                  title: title,
-                                                  message:
-                                                      'You are now at $title vicinity',
-                                                ),
-                                              );
-                                          await ref
-                                              .read(mapNotiferProvider.notifier)
-                                              .getPlaces(
-                                                  mapState.currentCircleId);
-                                          setState(() {
-                                            _selectedFeatureIndex = 2;
-                                          });
-                                          _pageController.jumpToPage(2);
-                                        },
+                                        onCreateCircle: () {},
                                       ),
+                                      MembersBottomSheet(
+                                        members: mapState.circleMembers,
+                                        circleId: mapState.currentCircleId,
+                                        otherUsersLocations:
+                                            mapState.otherUsersLocations,
+                                        onMemberSelected: (memberId) {
+                                          final loc = mapState
+                                              .otherUsersLocations[memberId];
+                                          if (loc != null) {
+                                            _mapController.move(loc, 13.0);
+                                          }
+                                        },
+                                        onMemberAdded: (newId) {},
+                                      ),
+                                      // either add-place or list-places
+                                      _selectedFeatureIndex == 2
+                                          ? PlacesBottomSheet(
+                                              placeList: mapState.placeList,
+                                              onClickAddPlace: () {
+                                                setState(() {
+                                                  _selectedFeatureIndex = 3;
+                                                });
+                                                _pageController.jumpToPage(2);
+                                              },
+                                              onClickPlace: (loc) {
+                                                ref
+                                                    .read(mapNotiferProvider
+                                                        .notifier)
+                                                    .updateSelectedPlace(loc);
+                                                _mapController.move(loc, 13.0);
+                                              },
+                                            )
+                                          : AddPlaceBottomSheet(
+                                              initialCenter:
+                                                  mapState.currentLocation!,
+                                              onClose: () {
+                                                setState(() {
+                                                  _selectedFeatureIndex = 2;
+                                                });
+                                                _pageController.jumpToPage(2);
+                                              },
+                                              onSave: (location, title) async {
+                                                await ref
+                                                    .read(mapNotiferProvider
+                                                        .notifier)
+                                                    .insertPlace(
+                                                      PlacesModel(
+                                                        geofenceId:
+                                                            UuidV4().generate(),
+                                                        circleId: mapState
+                                                                .currentCircleId ??
+                                                            '',
+                                                        centerGeography:
+                                                            'POINT(${location.latitude.toStringAsFixed(4)} ${location.longitude.toStringAsFixed(4)})',
+                                                        radiusM: 500,
+                                                        title: title,
+                                                        message:
+                                                            'You are now at $title vicinity',
+                                                      ),
+                                                    );
+                                                await ref
+                                                    .read(mapNotiferProvider
+                                                        .notifier)
+                                                    .getPlaces(mapState
+                                                        .currentCircleId);
+                                                setState(() {
+                                                  _selectedFeatureIndex = 2;
+                                                });
+                                                _pageController.jumpToPage(2);
+                                              },
+                                            ),
+                                    ],
+                                  ),
+                                ),
                               ],
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     );
                   },
                 ),
               ],
             ),
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          FloatingActionButton(
-            onPressed: _showAddCircleSheet,
-            tooltip: 'Add new circle',
-            child: const Icon(Icons.add_circle),
-          ),
-          const SizedBox(height: 10),
-          if (mapState.hasCircle)
-            FloatingActionButton(
-              onPressed: _recenterMap,
-              tooltip: 'Recenter',
-              child: const Icon(Icons.center_focus_strong),
-            ),
-        ],
-      ),
     );
   }
 
   Widget _buildTabChip({
-    required String label,
+    required IconData icon,
     required int index,
     required BuildContext context,
   }) {
@@ -271,8 +299,10 @@ class _MapPageState extends ConsumerState<MapPage> {
         );
       },
       child: Chip(
-        label: Text(label),
-        backgroundColor: isSelected ? Theme.of(context).primaryColor : null,
+        labelPadding: const EdgeInsets.symmetric(horizontal: 16.0),
+        label:
+            Icon(icon, color: isSelected ? AppColors.white : AppColors.black),
+        backgroundColor: isSelected ? AppColors.primaryBlue : null,
         labelStyle: TextStyle(color: isSelected ? Colors.white : null),
       ),
     );

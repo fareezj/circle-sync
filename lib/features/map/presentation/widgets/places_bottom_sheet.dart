@@ -24,46 +24,51 @@ class PlacesBottomSheet extends ConsumerStatefulWidget {
 class _PlacesBottomSheetState extends ConsumerState<PlacesBottomSheet> {
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 16.0),
-      child: SingleChildScrollView(
-        child: Column(
-          children: [
-            TextWidgets.mainSemiBold(title: 'Places'),
-            ListView.builder(
-              shrinkWrap: true,
+    return MediaQuery.removePadding(
+      context: context,
+      removeTop: true,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: TextWidgets.mainBold(title: 'Places', fontSize: 20.0),
+              ),
+              IconButton(
+                icon: const Icon(Icons.add),
+                onPressed: () => widget.onClickAddPlace(),
+              ),
+            ],
+          ),
+          SizedBox(height: 24),
+          Expanded(
+            child: ListView.separated(
               itemCount: widget.placeList.length,
-              physics: NeverScrollableScrollPhysics(),
+              physics: ClampingScrollPhysics(),
+              separatorBuilder: (context, index) => const Divider(),
               itemBuilder: (context, index) {
-                return GestureDetector(
+                return ListTile(
+                  title: TextWidgets.mainSemiBold(
+                      title: widget.placeList[index].title,
+                      textAlign: TextAlign.start),
+                  subtitle: TextWidgets.mainRegular(
+                      title: widget.placeList[index].centerGeography,
+                      textAlign: TextAlign.start),
                   onTap: () {
                     final location = widget.placeList[index].centerGeography;
                     final latLng = LatLngExtractor.extractLatLng(location);
                     print(latLng);
                     widget.onClickPlace(latLng);
                   },
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextWidgets.mainRegular(
-                          title: widget.placeList[index].title,
-                        ),
-                      ),
-                      Expanded(
-                        child: TextWidgets.mainRegular(
-                          title: widget.placeList[index].centerGeography,
-                        ),
-                      ),
-                    ],
-                  ),
                 );
               },
             ),
-            ElevatedButton(
-                onPressed: () => widget.onClickAddPlace(),
-                child: Text('Add places')),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

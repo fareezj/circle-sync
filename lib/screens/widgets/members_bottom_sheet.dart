@@ -1,4 +1,5 @@
 import 'package:circle_sync/features/circles/data/models/circle_model.dart';
+import 'package:circle_sync/widgets/text_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:circle_sync/features/circles/data/datasources/circle_service.dart';
 import 'package:latlong2/latlong.dart';
@@ -72,47 +73,46 @@ class MembersBottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
+    return MediaQuery.removePadding(
+      context: context,
+      removeTop: true,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Circle Members',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              IconButton(
-                icon: const Icon(Icons.add),
-                onPressed: () => _showAddMemberDialog(context),
-              ),
-            ],
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child:
+                TextWidgets.mainBold(title: 'Circle Members', fontSize: 20.0),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 24),
           Expanded(
-            child: ListView.builder(
-              shrinkWrap: true,
+            child: ListView.separated(
               itemCount: members.length,
+              physics: ClampingScrollPhysics(),
+              separatorBuilder: (context, index) => const Divider(),
               itemBuilder: (context, index) {
                 final memberId = members[index].userId;
-                return ListTile(
-                  title: Text(members[index].name),
-                  onTap: () {
-                    final memberLocation = otherUsersLocations[memberId];
-                    if (memberLocation != null) {
-                      onMemberSelected(memberId);
-                      Navigator.pop(context);
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text(
-                                'Location not available for this member.')),
-                      );
-                    }
-                  },
+                return Column(
+                  children: [
+                    ListTile(
+                      title: Text(members[index].name),
+                      leading: const Icon(Icons.person),
+                      onTap: () {
+                        final memberLocation = otherUsersLocations[memberId];
+                        if (memberLocation != null) {
+                          onMemberSelected(memberId);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text(
+                                    'Location not available for this member.')),
+                          );
+                        }
+                      },
+                    ),
+                    if (index == members.length - 1) const Divider()
+                  ],
                 );
               },
             ),

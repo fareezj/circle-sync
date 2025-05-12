@@ -1,25 +1,32 @@
+import 'package:circle_sync/features/circles/data/models/circle_model.dart';
 import 'package:circle_sync/features/map/presentation/pages/widgets/circle_list_sheet.dart';
 import 'package:circle_sync/models/circle_model.dart';
+import 'package:circle_sync/widgets/text_widgets.dart';
 import 'package:flutter/material.dart';
 
-class CircleInfoCard extends StatelessWidget {
+class CircleBottomSheet extends StatelessWidget {
   final bool hasCircle;
-  final String? circleName;
-  List<CircleModel> circleList;
+  final CircleModel? circle;
+  final List<CircleMembersModel> members;
   final Function(CircleModel) onCircleTap;
   final VoidCallback onCreateCircle;
 
-  CircleInfoCard({
+  const CircleBottomSheet({
     super.key,
+    required this.members,
     required this.onCircleTap,
-    required this.circleList,
     required this.hasCircle,
-    required this.circleName,
+    required this.circle,
     required this.onCreateCircle,
   });
 
   @override
   Widget build(BuildContext context) {
+    print('members: ${members[0].userId}');
+    print('circle: ${circle?.createdBy}');
+    final ownerName =
+        members.firstWhere((member) => member.userId == circle!.createdBy).name;
+
     if (!hasCircle) {
       return Card(
         color: Colors.white.withOpacity(0.9),
@@ -43,26 +50,18 @@ class CircleInfoCard extends StatelessWidget {
       );
     }
 
-    if (circleName == null) return const SizedBox.shrink();
-
-    return GestureDetector(
-      onTap: () {
-        showModalBottomSheet(
-          context: context,
-          builder: (_) => CircleListSheet(
-            circleList: circleList,
-            onCircleTap: (p0) => onCircleTap(p0),
-          ),
-        );
-      },
-      child: Card(
-        color: Colors.white.withOpacity(0.9),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Text(
-            circleName!,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextWidgets.mainBold(title: circle!.name, fontSize: 20.0),
+            SizedBox(height: 8),
+            TextWidgets.mainSemiBold(title: 'Created by: $ownerName'),
+            TextWidgets.mainSemiBold(
+                title: 'Created ate: ${circle!.dateCreated.toString()}'),
+          ],
         ),
       ),
     );
