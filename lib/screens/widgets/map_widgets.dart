@@ -137,17 +137,17 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
       List<LatLng> trackingPoints, List<LatLng> osrmRoutePoints) {
     polylines = <Polyline>[];
 
-    if (osrmRoutePoints.isNotEmpty) {
-      setState(() {
-        polylines.add(
-          Polyline(
-            points: osrmRoutePoints,
-            strokeWidth: 4,
-            color: Colors.blue,
-          ),
-        );
-      });
-    }
+    // if (osrmRoutePoints.isNotEmpty) {
+    //   setState(() {
+    //     polylines.add(
+    //       Polyline(
+    //         points: osrmRoutePoints,
+    //         strokeWidth: 4,
+    //         color: Colors.blue,
+    //       ),
+    //     );
+    //   });
+    // }
     if (trackingPoints.isNotEmpty) {
       setState(() {
         polylines.add(
