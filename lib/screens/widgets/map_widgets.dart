@@ -76,7 +76,7 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
             child: GestureDetector(
               onTap: () {
                 ref
-                    .read(mapNotiferProvider.notifier)
+                    .read(mapNotifierProvider.notifier)
                     .updateSelectedPlace(latLng);
               },
               child: FittedBox(
@@ -84,7 +84,7 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
                 child: PlaceMarker(
                   place: place,
                   isSelected:
-                      ref.read(mapNotiferProvider).selectedPlace == latLng,
+                      ref.read(mapNotifierProvider).selectedPlace == latLng,
                 ),
               ),
             ),
@@ -114,7 +114,7 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
           child: GestureDetector(
             onTap: () {
               ref
-                  .read(mapNotiferProvider.notifier)
+                  .read(mapNotifierProvider.notifier)
                   .updateSelectedMember(member);
             },
             child: FittedBox(
@@ -122,7 +122,7 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
               child: MemberMarker(
                 user: member,
                 isSelected:
-                    ref.read(mapNotiferProvider).selectedMember?.userId ==
+                    ref.read(mapNotifierProvider).selectedMember?.userId ==
                         userId,
               ),
             ),
@@ -179,8 +179,8 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
   @override
   Widget build(BuildContext context) {
     _buildMarkers();
-    _buildPolylines(ref.watch(mapNotiferProvider).trackingPoints,
-        ref.watch(mapNotiferProvider).osrmRoutePoints);
+    _buildPolylines(ref.watch(mapNotifierProvider).trackingPoints,
+        ref.watch(mapNotifierProvider).osrmRoutePoints);
     return FlutterMap(
       mapController: widget.mapController,
       options: MapOptions(

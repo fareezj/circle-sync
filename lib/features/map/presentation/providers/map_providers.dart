@@ -67,7 +67,7 @@ class MapNotifier extends StateNotifier<MapPageState> {
       );
       return null;
     }, (circles) async {
-      ref.read(mapNotiferProvider.notifier).getPlaces(circles[0].id);
+      ref.read(mapNotifierProvider.notifier).getPlaces(circles[0].id);
       final members = await circleUsecase.getCircleMembers(circles[0].id);
       state = state.copyWith(
         isLoading: false,
@@ -206,7 +206,7 @@ class MapNotifier extends StateNotifier<MapPageState> {
   void toggleSimulation(bool toggleSimulation) {}
 }
 
-final mapNotiferProvider =
+final mapNotifierProvider =
     StateNotifierProvider<MapNotifier, MapPageState>((ref) {
   return MapNotifier(
       ref.watch(mapUsecaseProvider), ref.watch(circleUsecaseProvider), ref);

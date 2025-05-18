@@ -138,13 +138,13 @@ class LocationService {
       onLocationUpdate(updated, [updated]);
 
       if (_isLocationSharing) {
-        await _upsertLocation(circleId, uid, updated, false);
+        await upsertLocation(circleId, uid, updated, false);
       }
     });
   }
 
   /// Upsert a location row in Supabase
-  Future<void> _upsertLocation(
+  Future<void> upsertLocation(
     String circleId,
     String userId,
     LatLng loc,
@@ -205,7 +205,7 @@ class LocationService {
     _isLocationSharing = false;
     final user = _supabase.auth.currentUser;
     if (user == null || lastKnown == null) return;
-    await _upsertLocation(circleId, user.id, lastKnown, true);
+    await upsertLocation(circleId, user.id, lastKnown, true);
   }
 
   /// Resume sharing
@@ -216,7 +216,7 @@ class LocationService {
     _isLocationSharing = true;
     final user = _supabase.auth.currentUser;
     if (user == null || lastKnown == null) return;
-    await _upsertLocation(circleId, user.id, lastKnown, false);
+    await upsertLocation(circleId, user.id, lastKnown, false);
   }
 
   /// Foreground task start

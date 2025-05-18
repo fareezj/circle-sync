@@ -1,33 +1,46 @@
 import UIKit
 import Flutter
 import flutter_foreground_task
+import background_location_tracker
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
+  
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
+    // 1. Register flutter plugins
     GeneratedPluginRegistrant.register(with: self)
-    // register callback for background isolate
+    
+    // 2. Register background callbacks
     SwiftFlutterForegroundTaskPlugin.setPluginRegistrantCallback(registerPlugins)
+    BackgroundLocationTrackerPlugin.setPluginRegistrantCallback(registerPlugins)
+    
+    // 3. Hook notification delegate (FlutterAppDelegate already conforms)
     if #available(iOS 10.0, *) {
       UNUserNotificationCenter.current().delegate = self
     }
+    
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+  
+  // MARK: - Notification Handling
+  
+  @available(iOS 10.0, *)
+  override func userNotificationCenter(
+    _ center: UNUserNotificationCenter,
+    willPresent notification: UNNotification,
+    withCompletionHandler completionHandler:
+      @escaping (UNNotificationPresentationOptions) -> Void
+  ) {
+    // Display alert & sound when a notification arrives in-app
+    completionHandler([.alert, .sound])
   }
 }
 
-// Bridge to register Dart plugins in the background isolate
-func registerPlugins(registry: FlutterPluginRegistry) {
-  GeneratedPluginRegistrant.register(with: registry)
-}
+// MARK: - Background plugin registration bridge
 
-@available(iOS 10.0, *)
-func userNotificationCenter(
-  _ center: UNUserNotificationCenter,
-  willPresent notification: UNNotification,
-  withCompletionHandler completionHandler:
-    @escaping (UNNotificationPresentationOptions) -> Void) {
-  completionHandler([.alert, .sound])
+fileprivate func registerPlugins(registry: FlutterPluginRegistry) {
+  GeneratedPluginRegistrant.register(with: registry)
 }

@@ -1,3 +1,4 @@
+import 'package:background_location_tracker/background_location_tracker.dart';
 import 'package:circle_sync/features/map/data/models/map_models.dart';
 import 'package:circle_sync/features/map/presentation/pages/widgets/add_circle_sheet.dart';
 import 'package:circle_sync/features/map/presentation/widgets/add_place_bottom_sheet.dart';
@@ -15,7 +16,44 @@ import 'package:circle_sync/services/location_service.dart';
 import 'package:circle_sync/screens/widgets/map_info.dart';
 import 'package:circle_sync/features/map/presentation/providers/map_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/v4.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'dart:io';
+
+@pragma('vm:entry-point')
+void backgroundCallback() {
+  BackgroundLocationTrackerManager.handleBackgroundUpdated((data) async {
+    print('AWOW LOCATION UPDATE1: ${data.lat} ${data.lon}');
+
+    await Supabase.initialize(
+      url: 'https://hnbqegfgzwugkdtfysma.supabase.co',
+      anonKey:
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhuYnFlZ2Znend1Z2tkdGZ5c21hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUxNTE2NjQsImV4cCI6MjA2MDcyNzY2NH0.l_RqDcUmqvB_MRJ3VG-VQJcjVXqlKeQPghoEy5awTGc',
+    );
+
+    // query by db to get below values
+
+    await Supabase.instance.client.from('locations').upsert(
+      {
+        'circle_id': circleId,
+        'user_id': userId,
+        'lat': data.lat,
+        'lng': data.lon,
+        'created_at': DateTime.now().toUtc().toIso8601String(),
+        'is_paused': false,
+      },
+      onConflict:
+          'circle_id,user_id', // atomic update/insert :contentReference[oaicite:5]{index=5}
+    );
+    print('AWOW LOCATION UPDATE: ${data.lat} ${data.lon}');
+    print('AWOW PASSED');
+  });
+}
 
 class MapPage extends ConsumerStatefulWidget {
   final String? circleId;
@@ -37,31 +75,53 @@ class _MapPageState extends ConsumerState<MapPage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsFlutterBinding.ensureInitialized();
+    _initPref();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       ref
-          .read(mapNotiferProvider.notifier)
+          .read(mapNotifierProvider.notifier)
           .updateLocationSharing(_locationService.isLocationSharing);
       ref
-          .read(mapNotiferProvider.notifier)
+          .read(mapNotifierProvider.notifier)
           .loadInitialCircle()
           .then((circle) async {
         await ref
-            .read(mapNotiferProvider.notifier)
+            .read(mapNotifierProvider.notifier)
             .loadCircleDetails(circle, _mapController);
       });
-      ref.read(mapNotiferProvider.notifier).startForegroundTask();
+
+      //ref.read(mapNotifierProvider.notifier).startForegroundTask();
+      await BackgroundLocationTrackerManager.initialize(
+        backgroundCallback,
+        config: const BackgroundLocationTrackerConfig(
+          loggingEnabled: true,
+          androidConfig: AndroidConfig(
+            notificationIcon: 'explore',
+            trackingInterval: Duration(seconds: 4),
+            distanceFilterMeters: null,
+          ),
+          iOSConfig: IOSConfig(
+            activityType: ActivityType.FITNESS,
+            distanceFilterMeters: null,
+            restartAfterKill: true,
+          ),
+        ),
+      );
+      await BackgroundLocationTrackerManager.startTracking();
     });
   }
 
+  Future<void> _initPref() async {}
+
   Future<void> loadNewCircle(CircleModel circle) async {
     await ref
-        .read(mapNotiferProvider.notifier)
+        .read(mapNotifierProvider.notifier)
         .loadCircleDetails(circle, _mapController);
-    await ref.read(mapNotiferProvider.notifier).getPlaces(circle.id);
+    await ref.read(mapNotifierProvider.notifier).getPlaces(circle.id);
   }
 
   void _recenterMap() {
-    final loc = ref.read(mapNotiferProvider).currentLocation;
+    final loc = ref.read(mapNotifierProvider).currentLocation;
     if (loc != null) _mapController.move(loc, 13.0);
   }
 
@@ -78,7 +138,7 @@ class _MapPageState extends ConsumerState<MapPage> {
 
   @override
   Widget build(BuildContext context) {
-    final mapState = ref.watch(mapNotiferProvider);
+    final mapState = ref.watch(mapNotifierProvider);
 
     return Scaffold(
       body: mapState.currentLocation == null
@@ -222,7 +282,7 @@ class _MapPageState extends ConsumerState<MapPage> {
                                               },
                                               onClickPlace: (loc) {
                                                 ref
-                                                    .read(mapNotiferProvider
+                                                    .read(mapNotifierProvider
                                                         .notifier)
                                                     .updateSelectedPlace(loc);
                                                 _mapController.move(loc, 13.0);
@@ -239,7 +299,7 @@ class _MapPageState extends ConsumerState<MapPage> {
                                               },
                                               onSave: (location, title) async {
                                                 await ref
-                                                    .read(mapNotiferProvider
+                                                    .read(mapNotifierProvider
                                                         .notifier)
                                                     .insertPlace(
                                                       PlacesModel(
@@ -257,7 +317,7 @@ class _MapPageState extends ConsumerState<MapPage> {
                                                       ),
                                                     );
                                                 await ref
-                                                    .read(mapNotiferProvider
+                                                    .read(mapNotifierProvider
                                                         .notifier)
                                                     .getPlaces(mapState
                                                         .currentCircleId);
