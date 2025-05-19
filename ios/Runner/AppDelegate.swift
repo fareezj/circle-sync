@@ -1,21 +1,26 @@
 import UIKit
 import Flutter
 import flutter_foreground_task
-import background_location_tracker
+import native_geofence
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
-  
+
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
+
+            // Used by plugin: native_geofence
+    NativeGeofencePlugin.setPluginRegistrantCallback { registry in
+      GeneratedPluginRegistrant.register(with: registry)
+    }
+
     // 1. Register flutter plugins
     GeneratedPluginRegistrant.register(with: self)
     
     // 2. Register background callbacks
     SwiftFlutterForegroundTaskPlugin.setPluginRegistrantCallback(registerPlugins)
-    BackgroundLocationTrackerPlugin.setPluginRegistrantCallback(registerPlugins)
     
     // 3. Hook notification delegate (FlutterAppDelegate already conforms)
     if #available(iOS 10.0, *) {

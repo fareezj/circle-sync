@@ -1,9 +1,9 @@
-import 'package:background_location_tracker/background_location_tracker.dart';
 import 'package:circle_sync/features/map/data/models/map_models.dart';
 import 'package:circle_sync/features/map/presentation/pages/widgets/add_circle_sheet.dart';
 import 'package:circle_sync/features/map/presentation/widgets/add_place_bottom_sheet.dart';
 import 'package:circle_sync/features/map/presentation/widgets/places_bottom_sheet.dart';
 import 'package:circle_sync/models/circle_model.dart';
+import 'package:circle_sync/providers/app_configs/app_configs_provider.dart';
 import 'package:circle_sync/screens/widgets/circle_bottom_sheet.dart';
 import 'package:circle_sync/utils/app_colors.dart';
 import 'package:flutter/material.dart';
@@ -18,6 +18,7 @@ import 'package:circle_sync/features/map/presentation/providers/map_providers.da
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:native_geofence/native_geofence.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/v4.dart';
@@ -25,34 +26,57 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'dart:io';
 
+import 'package:supabase/supabase.dart';
+
 @pragma('vm:entry-point')
-void backgroundCallback() {
-  BackgroundLocationTrackerManager.handleBackgroundUpdated((data) async {
-    print('AWOW LOCATION UPDATE1: ${data.lat} ${data.lon}');
+Future<void> geofenceTriggered(GeofenceCallbackParams params) async {
+  debugPrint('Geofence triggered with params11: $params');
 
-    await Supabase.initialize(
-      url: 'https://hnbqegfgzwugkdtfysma.supabase.co',
-      anonKey:
-          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhuYnFlZ2Znend1Z2tkdGZ5c21hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUxNTE2NjQsImV4cCI6MjA2MDcyNzY2NH0.l_RqDcUmqvB_MRJ3VG-VQJcjVXqlKeQPghoEy5awTGc',
+  try {
+    final parts = params.geofences[0].id.split('|');
+    final id = parts[0];
+    final userId = parts[1];
+    // 2. (Android) promote to foreground so the OS won't kill your isolate mid-network :contentReference[oaicite:1]{index=1}
+    //NativeGeofenceBackgroundManager.instance.promoteToForeground();
+
+    // 1. Create a lightweight client—this works in any isolate :contentReference[oaicite:2]{index=2}
+    final supabase = SupabaseClient(
+      'https://hnbqegfgzwugkdtfysma.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhuYnFlZ2Znend1Z2tkdGZ5c21hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUxNTE2NjQsImV4cCI6MjA2MDcyNzY2NH0.l_RqDcUmqvB_MRJ3VG-VQJcjVXqlKeQPghoEy5awTGc',
     );
+    // Fetch circle IDs
+    final res = await supabase.from('circles').select('circle_id');
+    print(params);
+    print(params.location);
+    print(res);
 
-    // query by db to get below values
+    final circleIds = res.map((r) => r['circle_id'] as String).toList();
 
-    await Supabase.instance.client.from('locations').upsert(
-      {
-        'circle_id': circleId,
-        'user_id': userId,
-        'lat': data.lat,
-        'lng': data.lon,
-        'created_at': DateTime.now().toUtc().toIso8601String(),
-        'is_paused': false,
-      },
-      onConflict:
-          'circle_id,user_id', // atomic update/insert :contentReference[oaicite:5]{index=5}
-    );
-    print('AWOW LOCATION UPDATE: ${data.lat} ${data.lon}');
-    print('AWOW PASSED');
-  });
+    // Upsert your location for each circle
+    final lat = params.geofences[0].location.latitude;
+    final lng = params.geofences[0].location.longitude;
+    print('lat: $lat');
+    print('lng: $lng');
+    for (final circleId in circleIds) {
+      await supabase.from('locations').upsert(
+        {
+          'circle_id': circleId,
+          'user_id': userId,
+          'lat': lat,
+          'lng': lng,
+          'created_at': DateTime.now().toUtc().toIso8601String(),
+          'is_paused': false,
+        },
+        onConflict: 'circle_id,user_id',
+      ); // atomic update/insert :contentReference[oaicite:5]{index=5});
+    }
+
+    // 2. Demote back to background when you’re done :contentReference[oaicite:3]{index=3}
+    // NativeGeofenceBackgroundManager.instance.demoteToBackground();
+  } catch (error, stack) {
+    debugPrint('❌ geofenceTriggered error: $error');
+    debugPrint('$stack');
+  }
 }
 
 class MapPage extends ConsumerStatefulWidget {
@@ -76,12 +100,14 @@ class _MapPageState extends ConsumerState<MapPage> {
   void initState() {
     super.initState();
     WidgetsFlutterBinding.ensureInitialized();
-    _initPref();
+
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      _initPref();
+
       ref
           .read(mapNotifierProvider.notifier)
           .updateLocationSharing(_locationService.isLocationSharing);
-      ref
+      await ref
           .read(mapNotifierProvider.notifier)
           .loadInitialCircle()
           .then((circle) async {
@@ -90,28 +116,106 @@ class _MapPageState extends ConsumerState<MapPage> {
             .loadCircleDetails(circle, _mapController);
       });
 
-      //ref.read(mapNotifierProvider.notifier).startForegroundTask();
-      await BackgroundLocationTrackerManager.initialize(
-        backgroundCallback,
-        config: const BackgroundLocationTrackerConfig(
-          loggingEnabled: true,
-          androidConfig: AndroidConfig(
-            notificationIcon: 'explore',
-            trackingInterval: Duration(seconds: 4),
-            distanceFilterMeters: null,
-          ),
-          iOSConfig: IOSConfig(
-            activityType: ActivityType.FITNESS,
-            distanceFilterMeters: null,
-            restartAfterKill: true,
-          ),
-        ),
-      );
-      await BackgroundLocationTrackerManager.startTracking();
+      ref.read(mapNotifierProvider.notifier).startForegroundTask();
     });
   }
 
-  Future<void> _initPref() async {}
+  Future<void> _initPref() async {
+    // 1) get your userId however you need it
+    final userId = await ref.watch(getUserIdProvider.future);
+
+    // 2) init the plugin
+    await NativeGeofenceManager.instance.initialize();
+
+    // 3) hard-coded list of your zones
+    final zones = <Map<String, dynamic>>[
+      {
+        'lat': 3.0620,
+        'lon': 101.6721,
+        'radius': 500.0,
+        'title': 'LRT AWAN BESAR'
+      },
+      {'lat': 3.0619, 'lon': 101.6609, 'radius': 500.0, 'title': 'Muhibbah'},
+      {'lat': 3.0657, 'lon': 101.6629, 'radius': 500.0, 'title': 'RnR Kinrara'},
+      {'lat': 3.1510, 'lon': 101.5698, 'radius': 500.0, 'title': 'Luxor Tech'},
+      {
+        'lat': 3.1393,
+        'lon': 101.5967,
+        'radius': 500.0,
+        'title': 'Driving NKVE'
+      },
+      {'lat': 3.0650, 'lon': 101.6812, 'radius': 500.0, 'title': 'W City'},
+      {'lat': 3.0574, 'lon': 101.6788, 'radius': 500.0, 'title': 'BJ Golf'},
+      {
+        'lat': 3.0586,
+        'lon': 101.6875,
+        'radius': 1000.0,
+        'title': 'Columbia Hospital'
+      },
+      {'lat': 3.1137, 'lon': 101.5978, 'radius': 500.0, 'title': 'Church'},
+      {'lat': 3.0566, 'lon': 101.6180, 'radius': 500.0, 'title': 'Sunway'},
+      {'lat': 3.0582, 'lon': 101.6739, 'radius': 500.0, 'title': 'HERO'},
+      {
+        'lat': 3.1525,
+        'lon': 101.5755,
+        'radius': 500.0,
+        'title': 'Leaving Luxor'
+      },
+      {'lat': 3.0688, 'lon': 101.6731, 'radius': 500.0, 'title': 'Merchant'},
+      {
+        'lat': 3.0697,
+        'lon': 101.6416,
+        'radius': 500.0,
+        'title': 'Kinrara Intersection'
+      },
+      {'lat': 3.0921, 'lon': 101.6124, 'radius': 500.0, 'title': 'LDP Corner'},
+      {
+        'lat': 3.1588,
+        'lon': 101.5997,
+        'radius': 500.0,
+        'title': 'ENTERING NKVE'
+      },
+      {'lat': 3.0628, 'lon': 101.6678, 'radius': 500.0, 'title': 'OUG CONDO'},
+      {'lat': 3.1106, 'lon': 101.5921, 'radius': 500.0, 'title': 'Glenmarie'},
+      {'lat': 3.0631, 'lon': 101.6135, 'radius': 500.0, 'title': 'Tol Sunway'},
+      {'lat': 3.0551, 'lon': 101.6913, 'radius': 500.0, 'title': 'STADIUM'},
+      // …add more here as needed
+    ];
+
+    // 4) register each one
+    for (var z in zones) {
+      final fence = Geofence(
+        id: '${z['title']}|$userId', // unique per user
+        location: Location(
+          latitude: z['lat'] as double,
+          longitude: z['lon'] as double,
+        ),
+        radiusMeters: z['radius'] as double,
+        triggers: {
+          GeofenceEvent.enter,
+          GeofenceEvent.exit,
+          GeofenceEvent.dwell
+        },
+        iosSettings: const IosGeofenceSettings(
+          initialTrigger: true,
+        ),
+        androidSettings: const AndroidGeofenceSettings(
+          initialTriggers: {GeofenceEvent.enter, GeofenceEvent.dwell},
+          expiration: Duration(days: 7),
+          loiteringDelay: Duration(minutes: 5),
+          notificationResponsiveness: Duration(minutes: 5),
+        ),
+      );
+
+      await NativeGeofenceManager.instance
+          .createGeofence(fence, geofenceTriggered);
+    }
+
+    // 5) verify how many got registered
+    final active =
+        await NativeGeofenceManager.instance.getRegisteredGeofences();
+    print('There are ${active.length} active geofences.');
+  }
 
   Future<void> loadNewCircle(CircleModel circle) async {
     await ref

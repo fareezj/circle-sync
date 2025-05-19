@@ -1,6 +1,7 @@
 import 'dart:io';
 
-import 'package:circle_sync/features/bg_location_page.dart';
+import 'package:circle_sync/features/map/presentation/pages/map_page.dart';
+import 'package:circle_sync/features/map/presentation/pages/native_geofence.dart';
 import 'package:circle_sync/providers/app_configs/app_configs_provider.dart';
 import 'package:circle_sync/features/authentication/presentation/pages/login_page.dart';
 import 'package:circle_sync/route_generator.dart';
@@ -12,6 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:native_geofence/native_geofence.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -20,6 +22,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  await NativeGeofenceManager.instance.initialize();
 
   final appDocDir = await getApplicationDocumentsDirectory();
   final hivePath = appDocDir.path;

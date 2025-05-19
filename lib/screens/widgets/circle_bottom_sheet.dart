@@ -23,7 +23,7 @@ class CircleBottomSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     print('members: ${members[0].userId}');
-    print('circle: ${circle?.createdBy}');
+    print('circle created by: ${circle?.createdBy}');
     final ownerName =
         members.firstWhere((member) => member.userId == circle!.createdBy).name;
 

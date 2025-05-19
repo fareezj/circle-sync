@@ -92,6 +92,7 @@ class MapNotifier extends StateNotifier<MapPageState> {
       return;
     }
     final members = await circleUsecase.getCircleMembers(circle.id);
+    print('CIRCLE MEMBERS: $members');
 
     state = state.copyWith(
       isLoading: false,
