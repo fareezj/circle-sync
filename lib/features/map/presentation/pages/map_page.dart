@@ -5,6 +5,7 @@ import 'package:circle_sync/features/map/presentation/widgets/places_bottom_shee
 import 'package:circle_sync/models/circle_model.dart';
 import 'package:circle_sync/providers/app_configs/app_configs_provider.dart';
 import 'package:circle_sync/screens/widgets/circle_bottom_sheet.dart';
+import 'package:circle_sync/services/location_fg.dart';
 import 'package:circle_sync/utils/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -16,17 +17,11 @@ import 'package:circle_sync/services/location_service.dart';
 import 'package:circle_sync/screens/widgets/map_info.dart';
 import 'package:circle_sync/features/map/presentation/providers/map_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive/hive.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:native_geofence/native_geofence.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/v4.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
-import 'dart:io';
-
 import 'package:supabase/supabase.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 @pragma('vm:entry-point')
 Future<void> geofenceTriggered(GeofenceCallbackParams params) async {
@@ -116,85 +111,63 @@ class _MapPageState extends ConsumerState<MapPage> {
             .loadCircleDetails(circle, _mapController);
       });
 
-      ref.read(mapNotifierProvider.notifier).startForegroundTask();
+      // ref.read(mapNotifierProvider.notifier).startForegroundTask();
     });
   }
 
+  final supabase = Supabase.instance.client;
+
   Future<void> _initPref() async {
-    // 1) get your userId however you need it
+    print('===INIT GEOFENCE===');
     final userId = await ref.watch(getUserIdProvider.future);
 
-    // 2) init the plugin
+    // 1) Initialise the native geofence plugin
     await NativeGeofenceManager.instance.initialize();
 
-    // 3) hard-coded list of your zones
-    final zones = <Map<String, dynamic>>[
-      {
-        'lat': 3.0620,
-        'lon': 101.6721,
-        'radius': 500.0,
-        'title': 'LRT AWAN BESAR'
-      },
-      {'lat': 3.0619, 'lon': 101.6609, 'radius': 500.0, 'title': 'Muhibbah'},
-      {'lat': 3.0657, 'lon': 101.6629, 'radius': 500.0, 'title': 'RnR Kinrara'},
-      {'lat': 3.1510, 'lon': 101.5698, 'radius': 500.0, 'title': 'Luxor Tech'},
-      {
-        'lat': 3.1393,
-        'lon': 101.5967,
-        'radius': 500.0,
-        'title': 'Driving NKVE'
-      },
-      {'lat': 3.0650, 'lon': 101.6812, 'radius': 500.0, 'title': 'W City'},
-      {'lat': 3.0574, 'lon': 101.6788, 'radius': 500.0, 'title': 'BJ Golf'},
-      {
-        'lat': 3.0586,
-        'lon': 101.6875,
-        'radius': 1000.0,
-        'title': 'Columbia Hospital'
-      },
-      {'lat': 3.1137, 'lon': 101.5978, 'radius': 500.0, 'title': 'Church'},
-      {'lat': 3.0566, 'lon': 101.6180, 'radius': 500.0, 'title': 'Sunway'},
-      {'lat': 3.0582, 'lon': 101.6739, 'radius': 500.0, 'title': 'HERO'},
-      {
-        'lat': 3.1525,
-        'lon': 101.5755,
-        'radius': 500.0,
-        'title': 'Leaving Luxor'
-      },
-      {'lat': 3.0688, 'lon': 101.6731, 'radius': 500.0, 'title': 'Merchant'},
-      {
-        'lat': 3.0697,
-        'lon': 101.6416,
-        'radius': 500.0,
-        'title': 'Kinrara Intersection'
-      },
-      {'lat': 3.0921, 'lon': 101.6124, 'radius': 500.0, 'title': 'LDP Corner'},
-      {
-        'lat': 3.1588,
-        'lon': 101.5997,
-        'radius': 500.0,
-        'title': 'ENTERING NKVE'
-      },
-      {'lat': 3.0628, 'lon': 101.6678, 'radius': 500.0, 'title': 'OUG CONDO'},
-      {'lat': 3.1106, 'lon': 101.5921, 'radius': 500.0, 'title': 'Glenmarie'},
-      {'lat': 3.0631, 'lon': 101.6135, 'radius': 500.0, 'title': 'Tol Sunway'},
-      {'lat': 3.0551, 'lon': 101.6913, 'radius': 500.0, 'title': 'STADIUM'},
-      // …add more here as needed
-    ];
+    // 2) Bail out early if we've already registered these once
+    final prefs = await SharedPreferences.getInstance();
+    final key = 'geofences_registered_$userId';
+    if (prefs.getBool(key) == true) {
+      print('🗺️ Geofences already registered for $userId, skipping.');
+      return;
+    }
 
-    // 4) register each one
-    for (var z in zones) {
+    // 3) Fetch your zones from Supabase
+    final resp = await supabase.from('geofences').select('''
+      title,
+      radius_m,
+      center_geography
+    ''');
+
+    // if (resp != null) {
+    //   print('❌ Supabase error: ${resp!.message}');
+    //   return;
+    // }
+
+    final rows = resp as List<dynamic>;
+
+    print('FETCHED GEOFENCES');
+    print(rows.toString());
+
+    // 4) Register each zone
+    for (var row in rows) {
+      final wkt = row['center_geography'] as String;
+      // e.g. "POINT(3.0620 101.6721)"
+      final inside = wkt.replaceAll(RegExp(r'POINT\(|\)'), '');
+      final parts = inside.split(RegExp(r'\s+'));
+      final lat = double.parse(parts[0]);
+      final lon = double.parse(parts[1]);
+      final radius = (row['radius_m'] as num).toDouble();
+      final title = row['title'] as String;
+
       final fence = Geofence(
-        id: '${z['title']}|$userId', // unique per user
-        location: Location(
-          latitude: z['lat'] as double,
-          longitude: z['lon'] as double,
-        ),
-        radiusMeters: z['radius'] as double,
+        id: '${title.replaceAll(" ", "_")}|$userId',
+        location: Location(latitude: lat, longitude: lon),
+        radiusMeters: radius,
         triggers: {
           GeofenceEvent.enter,
           GeofenceEvent.exit,
-          GeofenceEvent.dwell
+          GeofenceEvent.dwell,
         },
         iosSettings: const IosGeofenceSettings(
           initialTrigger: true,
@@ -209,12 +182,16 @@ class _MapPageState extends ConsumerState<MapPage> {
 
       await NativeGeofenceManager.instance
           .createGeofence(fence, geofenceTriggered);
+      print('➡️ Registered geofence: $title');
     }
 
-    // 5) verify how many got registered
+    // 5) Mark as done so we don’t re-add next time
+    await prefs.setBool(key, true);
+
+    // 6) Verify
     final active =
         await NativeGeofenceManager.instance.getRegisteredGeofences();
-    print('There are ${active.length} active geofences.');
+    print('✅ Total active geofences: ${active.length}');
   }
 
   Future<void> loadNewCircle(CircleModel circle) async {
@@ -227,6 +204,10 @@ class _MapPageState extends ConsumerState<MapPage> {
   void _recenterMap() {
     final loc = ref.read(mapNotifierProvider).currentLocation;
     if (loc != null) _mapController.move(loc, 13.0);
+  }
+
+  void _toggleLiveLocation() async {
+    await ref.read(mapNotifierProvider.notifier).startForegroundTask();
   }
 
   void _showAddCircleSheet() {
@@ -303,6 +284,15 @@ class _MapPageState extends ConsumerState<MapPage> {
                             onPressed: _recenterMap,
                             child: const Icon(Icons.center_focus_strong),
                           ),
+                        ElevatedButton(
+                          onPressed: () => _toggleLiveLocation(),
+                          child: const Icon(Icons.play_arrow),
+                        ),
+                        ElevatedButton(
+                          onPressed: () async =>
+                              LocationTask.stopForegroundTask(),
+                          child: const Icon(Icons.stop_circle),
+                        ),
                         Expanded(
                           child: Container(
                             decoration: const BoxDecoration(
@@ -482,3 +472,64 @@ class _MapPageState extends ConsumerState<MapPage> {
     super.dispose();
   }
 }
+
+// Future<void> _initPref() async {
+//   // 1) get your userId however you need it
+//   final userId = await ref.watch(getUserIdProvider.future);
+
+//   // 2) init the plugin
+//   await NativeGeofenceManager.instance.initialize();
+
+//   // 3) hard-coded list of your zones
+//   final zones = <Map<String, dynamic>>[
+//     { 'lat': 3.0620, 'lon': 101.6721, 'radius': 500.0,  'title': 'LRT AWAN BESAR' },
+//     { 'lat': 3.0619, 'lon': 101.6609, 'radius': 500.0,  'title': 'Muhibbah' },
+//     { 'lat': 3.0657, 'lon': 101.6629, 'radius': 500.0,  'title': 'RnR Kinrara' },
+//     { 'lat': 3.1510, 'lon': 101.5698, 'radius': 500.0,  'title': 'Luxor Tech' },
+//     { 'lat': 3.1393, 'lon': 101.5967, 'radius': 500.0,  'title': 'Driving NKVE' },
+//     { 'lat': 3.0650, 'lon': 101.6812, 'radius': 500.0,  'title': 'W City' },
+//     { 'lat': 3.0574, 'lon': 101.6788, 'radius': 500.0,  'title': 'BJ Golf' },
+//     { 'lat': 3.0586, 'lon': 101.6875, 'radius': 1000.0, 'title': 'Columbia Hospital' },
+//     { 'lat': 3.1137, 'lon': 101.5978, 'radius': 500.0,  'title': 'Church' },
+//     { 'lat': 3.0566, 'lon': 101.6180, 'radius': 500.0,  'title': 'Sunway' },
+//     { 'lat': 3.0582, 'lon': 101.6739, 'radius': 500.0,  'title': 'HERO' },
+//     { 'lat': 3.1525, 'lon': 101.5755, 'radius': 500.0,  'title': 'Leaving Luxor' },
+//     { 'lat': 3.0688, 'lon': 101.6731, 'radius': 500.0,  'title': 'Merchant' },
+//     { 'lat': 3.0697, 'lon': 101.6416, 'radius': 500.0,  'title': 'Kinrara Intersection' },
+//     { 'lat': 3.0921, 'lon': 101.6124, 'radius': 500.0,  'title': 'LDP Corner' },
+//     { 'lat': 3.1588, 'lon': 101.5997, 'radius': 500.0,  'title': 'ENTERING NKVE' },
+//     { 'lat': 3.0628, 'lon': 101.6678, 'radius': 500.0,  'title': 'OUG CONDO' },
+//     { 'lat': 3.1106, 'lon': 101.5921, 'radius': 500.0,  'title': 'Glenmarie' },
+//     { 'lat': 3.0631, 'lon': 101.6135, 'radius': 500.0,  'title': 'Tol Sunway' },
+//     { 'lat': 3.0551, 'lon': 101.6913, 'radius': 500.0,  'title': 'STADIUM' },
+//     // …add more here as needed
+//   ];
+
+//   // 4) register each one
+//   for (var z in zones) {
+//     final fence = Geofence(
+//       id:   '${z['title']}|$userId',                   // unique per user
+//       location: Location(
+//         latitude:  z['lat'] as double,
+//         longitude: z['lon'] as double,
+//       ),
+//       radiusMeters: z['radius'] as double,
+//       triggers: { GeofenceEvent.enter, GeofenceEvent.exit, GeofenceEvent.dwell },
+//       iosSettings: const IosGeofenceSettings(
+//         initialTrigger: true,
+//       ),
+//       androidSettings: const AndroidGeofenceSettings(
+//         initialTriggers: { GeofenceEvent.enter, GeofenceEvent.dwell },
+//         expiration: Duration(days: 7),
+//         loiteringDelay: Duration(minutes: 5),
+//         notificationResponsiveness: Duration(minutes: 5),
+//       ),
+//     );
+
+//     await NativeGeofenceManager.instance.createGeofence(fence, geofenceTriggered);
+//   }
+
+//   // 5) verify how many got registered
+//   final active = await NativeGeofenceManager.instance.getRegisteredGeofences();
+//   print('There are ${active.length} active geofences.');
+// }

@@ -163,17 +163,17 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
     //     );
     //   });
     // }
-    if (trackingPoints.isNotEmpty) {
-      setState(() {
-        polylines.add(
-          Polyline(
-            points: trackingPoints,
-            strokeWidth: 2,
-            color: Colors.red,
-          ),
-        );
-      });
-    }
+    // if (trackingPoints.isNotEmpty) {
+    //   setState(() {
+    //     polylines.add(
+    //       Polyline(
+    //         points: trackingPoints,
+    //         strokeWidth: 2,
+    //         color: Colors.red,
+    //       ),
+    //     );
+    //   });
+    // }
   }
 
   @override

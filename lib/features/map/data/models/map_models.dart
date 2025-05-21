@@ -1,3 +1,31 @@
+class Zone {
+  final double lat;
+  final double lon;
+  final double radius;
+  final String title;
+
+  Zone({
+    required this.lat,
+    required this.lon,
+    required this.radius,
+    required this.title,
+  });
+
+  /// if your API returns "POINT(lat lon)" strings:
+  factory Zone.fromPostgis(Map<String, dynamic> row) {
+    // e.g. row['center_geography'] == "POINT(3.0620 101.6721)"
+    final pt = (row['center_geography'] as String)
+        .replaceAll(RegExp(r'POINT\(|\)'), '')
+        .split(' ');
+    return Zone(
+      lat: double.parse(pt[0]),
+      lon: double.parse(pt[1]),
+      radius: (row['radius_m'] as num).toDouble(),
+      title: row['title'] as String,
+    );
+  }
+}
+
 class PlacesModel {
   final String geofenceId;
   final String circleId;

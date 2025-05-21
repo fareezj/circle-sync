@@ -105,24 +105,25 @@ class MapNotifier extends StateNotifier<MapPageState> {
       ),
     );
     try {
-      await _locationService.startForegroundTask();
-      await _locationService.initInitialLocationAndRoute(
-        onLocationAndRouteUpdate: (current, destination, trackingPoints) async {
-          state = state.copyWith(
-            currentLocation: current,
-            destinationLocation: destination,
-            trackingPoints: trackingPoints,
-          );
-          final routePoints = await _routeService.getRoute(
-            current.latitude,
-            current.longitude,
-            destination.latitude,
-            destination.longitude,
-          );
-          state = state.copyWith(osrmRoutePoints: routePoints);
-          mapController.move(current, 13.0);
-        },
-      );
+      // PAUSE LIVE LOCATION
+      // await _locationService.startForegroundTask();
+      // await _locationService.initInitialLocationAndRoute(
+      //   onLocationAndRouteUpdate: (current, destination, trackingPoints) async {
+      //     state = state.copyWith(
+      //       currentLocation: current,
+      //       destinationLocation: destination,
+      //       trackingPoints: trackingPoints,
+      //     );
+      //     final routePoints = await _routeService.getRoute(
+      //       current.latitude,
+      //       current.longitude,
+      //       destination.latitude,
+      //       destination.longitude,
+      //     );
+      //     state = state.copyWith(osrmRoutePoints: routePoints);
+      //     mapController.move(current, 13.0);
+      //   },
+      // );
 
       subscribeToLocationUpdates();
       subscribeToOtherUsersLocations();

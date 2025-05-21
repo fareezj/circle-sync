@@ -151,12 +151,12 @@ class LocationTaskHandler extends TaskHandler {
               'circle_id,user_id', // atomic update/insert :contentReference[oaicite:5]{index=5}
         );
       }
-
-      await FlutterForegroundTask.updateService(
-        notificationTitle: 'Location Update',
-        notificationText:
-            'Lat: ${lat.toStringAsFixed(5)}, Lng: ${lng.toStringAsFixed(5)}',
-      );
+      // Disablive live notifcation update
+      // await FlutterForegroundTask.updateService(
+      //   notificationTitle: 'Location Update',
+      //   notificationText:
+      //       'Lat: ${lat.toStringAsFixed(5)}, Lng: ${lng.toStringAsFixed(5)}',
+      // );
     }
 
     // 4) Subscribe to the position stream

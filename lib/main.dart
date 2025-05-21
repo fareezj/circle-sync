@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:circle_sync/features/map/presentation/pages/map_page.dart';
-import 'package:circle_sync/features/map/presentation/pages/native_geofence.dart';
 import 'package:circle_sync/providers/app_configs/app_configs_provider.dart';
 import 'package:circle_sync/features/authentication/presentation/pages/login_page.dart';
 import 'package:circle_sync/route_generator.dart';

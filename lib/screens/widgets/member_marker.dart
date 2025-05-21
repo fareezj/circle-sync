@@ -36,11 +36,9 @@ class MemberMarker extends StatelessWidget {
               child: TextWidgets.mainBold(title: user.name, fontSize: 20),
             ),
           ),
-        const Icon(
-          Icons.person_pin,
-          size: 30,
-          color: Colors.green,
-        ),
+        CircleAvatar(
+          child: Text(user.name.substring(0, 1).toUpperCase()),
+        )
       ],
     );
   }
