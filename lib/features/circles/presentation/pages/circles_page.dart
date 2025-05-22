@@ -97,7 +97,7 @@ class _CirclesPageState extends ConsumerState<CirclesPage> {
                             onPressed: () {
                               ref
                                   .read(circleNotifierProvider.notifier)
-                                  .joinCircle();
+                                  .joinCircle('', () {});
                             },
                             child: Text('Join circle')),
                         ElevatedButton(

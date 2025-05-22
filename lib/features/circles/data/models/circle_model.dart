@@ -1,6 +1,12 @@
 class CirclePageState {
   bool isLoading;
   CirclePageState(this.isLoading);
+
+  CirclePageState copyWith({bool? isLoading}) {
+    return CirclePageState(
+      isLoading ?? this.isLoading,
+    );
+  }
 }
 
 class CircleMembersModel {

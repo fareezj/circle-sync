@@ -1,12 +1,15 @@
 import 'package:circle_sync/features/map/data/models/map_models.dart';
-import 'package:circle_sync/features/map/presentation/pages/widgets/add_circle_sheet.dart';
 import 'package:circle_sync/features/map/presentation/widgets/add_place_bottom_sheet.dart';
 import 'package:circle_sync/features/map/presentation/widgets/places_bottom_sheet.dart';
+import 'package:circle_sync/features/map/presentation/widgets/tab_chip.dart';
 import 'package:circle_sync/models/circle_model.dart';
 import 'package:circle_sync/providers/app_configs/app_configs_provider.dart';
 import 'package:circle_sync/screens/widgets/circle_bottom_sheet.dart';
+import 'package:circle_sync/services/geofence_service.dart';
 import 'package:circle_sync/services/location_fg.dart';
-import 'package:circle_sync/utils/app_colors.dart';
+import 'package:circle_sync/widgets/global_message.dart';
+import 'package:circle_sync/widgets/loading_indicator.dart';
+import 'package:circle_sync/widgets/message_overlay.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:circle_sync/models/map_state_model.dart';
@@ -17,62 +20,7 @@ import 'package:circle_sync/services/location_service.dart';
 import 'package:circle_sync/screens/widgets/map_info.dart';
 import 'package:circle_sync/features/map/presentation/providers/map_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:native_geofence/native_geofence.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/v4.dart';
-import 'package:supabase/supabase.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
-@pragma('vm:entry-point')
-Future<void> geofenceTriggered(GeofenceCallbackParams params) async {
-  debugPrint('Geofence triggered with params11: $params');
-
-  try {
-    final parts = params.geofences[0].id.split('|');
-    final id = parts[0];
-    final userId = parts[1];
-    // 2. (Android) promote to foreground so the OS won't kill your isolate mid-network :contentReference[oaicite:1]{index=1}
-    //NativeGeofenceBackgroundManager.instance.promoteToForeground();
-
-    // 1. Create a lightweight client—this works in any isolate :contentReference[oaicite:2]{index=2}
-    final supabase = SupabaseClient(
-      'https://hnbqegfgzwugkdtfysma.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhuYnFlZ2Znend1Z2tkdGZ5c21hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUxNTE2NjQsImV4cCI6MjA2MDcyNzY2NH0.l_RqDcUmqvB_MRJ3VG-VQJcjVXqlKeQPghoEy5awTGc',
-    );
-    // Fetch circle IDs
-    final res = await supabase.from('circles').select('circle_id');
-    print(params);
-    print(params.location);
-    print(res);
-
-    final circleIds = res.map((r) => r['circle_id'] as String).toList();
-
-    // Upsert your location for each circle
-    final lat = params.geofences[0].location.latitude;
-    final lng = params.geofences[0].location.longitude;
-    print('lat: $lat');
-    print('lng: $lng');
-    for (final circleId in circleIds) {
-      await supabase.from('locations').upsert(
-        {
-          'circle_id': circleId,
-          'user_id': userId,
-          'lat': lat,
-          'lng': lng,
-          'created_at': DateTime.now().toUtc().toIso8601String(),
-          'is_paused': false,
-        },
-        onConflict: 'circle_id,user_id',
-      ); // atomic update/insert :contentReference[oaicite:5]{index=5});
-    }
-
-    // 2. Demote back to background when you’re done :contentReference[oaicite:3]{index=3}
-    // NativeGeofenceBackgroundManager.instance.demoteToBackground();
-  } catch (error, stack) {
-    debugPrint('❌ geofenceTriggered error: $error');
-    debugPrint('$stack');
-  }
-}
 
 class MapPage extends ConsumerStatefulWidget {
   final String? circleId;
@@ -89,141 +37,36 @@ class _MapPageState extends ConsumerState<MapPage> {
       DraggableScrollableController();
   final PageController _pageController = PageController();
 
-  int _selectedFeatureIndex = 0; // 0: Info, 1: Members, 2: Places/Add
-
   @override
   void initState() {
     super.initState();
     WidgetsFlutterBinding.ensureInitialized();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      _initPref();
-
-      ref
-          .read(mapNotifierProvider.notifier)
-          .updateLocationSharing(_locationService.isLocationSharing);
-      await ref
-          .read(mapNotifierProvider.notifier)
-          .loadInitialCircle()
-          .then((circle) async {
-        await ref
-            .read(mapNotifierProvider.notifier)
-            .loadCircleDetails(circle, _mapController);
-      });
-
-      // ref.read(mapNotifierProvider.notifier).startForegroundTask();
+      await initGeofence(ref);
+      await initCircleDetails();
     });
   }
 
-  final supabase = Supabase.instance.client;
-
-  Future<void> _initPref() async {
-    print('===INIT GEOFENCE===');
-    final userId = await ref.watch(getUserIdProvider.future);
-
-    // 1) Initialise the native geofence plugin
-    await NativeGeofenceManager.instance.initialize();
-
-    // 2) Bail out early if we've already registered these once
-    final prefs = await SharedPreferences.getInstance();
-    final key = 'geofences_registered_$userId';
-    if (prefs.getBool(key) == true) {
-      print('🗺️ Geofences already registered for $userId, skipping.');
-      return;
-    }
-
-    // 3) Fetch your zones from Supabase
-    final resp = await supabase.from('geofences').select('''
-      title,
-      radius_m,
-      center_geography
-    ''');
-
-    // if (resp != null) {
-    //   print('❌ Supabase error: ${resp!.message}');
-    //   return;
-    // }
-
-    final rows = resp as List<dynamic>;
-
-    print('FETCHED GEOFENCES');
-    print(rows.toString());
-
-    // 4) Register each zone
-    for (var row in rows) {
-      final wkt = row['center_geography'] as String;
-      // e.g. "POINT(3.0620 101.6721)"
-      final inside = wkt.replaceAll(RegExp(r'POINT\(|\)'), '');
-      final parts = inside.split(RegExp(r'\s+'));
-      final lat = double.parse(parts[0]);
-      final lon = double.parse(parts[1]);
-      final radius = (row['radius_m'] as num).toDouble();
-      final title = row['title'] as String;
-
-      final fence = Geofence(
-        id: '${title.replaceAll(" ", "_")}|$userId',
-        location: Location(latitude: lat, longitude: lon),
-        radiusMeters: radius,
-        triggers: {
-          GeofenceEvent.enter,
-          GeofenceEvent.exit,
-          GeofenceEvent.dwell,
-        },
-        iosSettings: const IosGeofenceSettings(
-          initialTrigger: true,
-        ),
-        androidSettings: const AndroidGeofenceSettings(
-          initialTriggers: {GeofenceEvent.enter, GeofenceEvent.dwell},
-          expiration: Duration(days: 7),
-          loiteringDelay: Duration(minutes: 5),
-          notificationResponsiveness: Duration(minutes: 5),
-        ),
-      );
-
-      await NativeGeofenceManager.instance
-          .createGeofence(fence, geofenceTriggered);
-      print('➡️ Registered geofence: $title');
-    }
-
-    // 5) Mark as done so we don’t re-add next time
-    await prefs.setBool(key, true);
-
-    // 6) Verify
-    final active =
-        await NativeGeofenceManager.instance.getRegisteredGeofences();
-    print('✅ Total active geofences: ${active.length}');
-  }
-
-  Future<void> loadNewCircle(CircleModel circle) async {
+  Future<void> initCircleDetails({bool getLatestCircle = false}) async {
+    ref
+        .read(mapNotifierProvider.notifier)
+        .updateLocationSharing(_locationService.isLocationSharing);
     await ref
         .read(mapNotifierProvider.notifier)
-        .loadCircleDetails(circle, _mapController);
-    await ref.read(mapNotifierProvider.notifier).getPlaces(circle.id);
-  }
-
-  void _recenterMap() {
-    final loc = ref.read(mapNotifierProvider).currentLocation;
-    if (loc != null) _mapController.move(loc, 13.0);
-  }
-
-  void _toggleLiveLocation() async {
-    await ref.read(mapNotifierProvider.notifier).startForegroundTask();
-  }
-
-  void _showAddCircleSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (_) => const AddCircleSheet(),
-    );
+        .loadInitialCircle(getLatestCircle: getLatestCircle)
+        .then((circle) async {
+      await ref
+          .read(mapNotifierProvider.notifier)
+          .loadCircleDetails(circle, _mapController);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final mapState = ref.watch(mapNotifierProvider);
+    final selectedChipItem = ref.watch(mapNotifierProvider).selectedChipItem;
+    final isLoading = ref.watch(baseLoadingNotifier);
 
     return Scaffold(
       body: mapState.currentLocation == null
@@ -261,7 +104,14 @@ class _MapPageState extends ConsumerState<MapPage> {
                       loadNewCircle(c);
                       _recenterMap();
                     },
-                    onCreateCircle: () {},
+                    onCircleCreated: () {
+                      initCircleDetails(getLatestCircle: true);
+                      _recenterMap();
+                    },
+                    onJoinedCircle: () {
+                      initCircleDetails(getLatestCircle: true);
+                      _recenterMap();
+                    },
                   ),
                 ),
                 // draggable & scrollable sheet
@@ -274,10 +124,6 @@ class _MapPageState extends ConsumerState<MapPage> {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        // ElevatedButton(
-                        //   onPressed: _showAddCircleSheet,
-                        //   child: const Icon(Icons.add_circle),
-                        // ),
                         const SizedBox(height: 10),
                         if (mapState.hasCircle)
                           ElevatedButton(
@@ -312,18 +158,27 @@ class _MapPageState extends ConsumerState<MapPage> {
                                     mainAxisAlignment:
                                         MainAxisAlignment.spaceEvenly,
                                     children: [
-                                      _buildTabChip(
-                                          icon: Icons.info,
-                                          index: 0,
-                                          context: context),
-                                      _buildTabChip(
-                                          icon: Icons.group,
-                                          index: 1,
-                                          context: context),
-                                      _buildTabChip(
-                                          icon: Icons.place,
-                                          index: 2,
-                                          context: context),
+                                      TabChip(
+                                        pageController: _pageController,
+                                        icon: Icons.info,
+                                        index: 0,
+                                        context: context,
+                                        isSelected: selectedChipItem == 0,
+                                      ),
+                                      TabChip(
+                                        pageController: _pageController,
+                                        icon: Icons.group,
+                                        index: 1,
+                                        context: context,
+                                        isSelected: selectedChipItem == 1,
+                                      ),
+                                      TabChip(
+                                        pageController: _pageController,
+                                        icon: Icons.place,
+                                        index: 2,
+                                        context: context,
+                                        isSelected: selectedChipItem == 2,
+                                      ),
                                     ],
                                   ),
                                 ),
@@ -333,8 +188,9 @@ class _MapPageState extends ConsumerState<MapPage> {
                                       MediaQuery.of(context).size.height * 0.7,
                                   child: PageView(
                                     controller: _pageController,
-                                    onPageChanged: (i) => setState(
-                                        () => _selectedFeatureIndex = i),
+                                    onPageChanged: (i) => ref
+                                        .read(mapNotifierProvider.notifier)
+                                        .updateSelectedChipItem(i),
                                     children: [
                                       CircleBottomSheet(
                                         members: mapState.circleMembers,
@@ -365,13 +221,14 @@ class _MapPageState extends ConsumerState<MapPage> {
                                         onMemberAdded: (newId) {},
                                       ),
                                       // either add-place or list-places
-                                      _selectedFeatureIndex == 2
+                                      selectedChipItem == 2
                                           ? PlacesBottomSheet(
                                               placeList: mapState.placeList,
                                               onClickAddPlace: () {
-                                                setState(() {
-                                                  _selectedFeatureIndex = 3;
-                                                });
+                                                ref
+                                                    .read(mapNotifierProvider
+                                                        .notifier)
+                                                    .updateSelectedChipItem(3);
                                                 _pageController.jumpToPage(2);
                                               },
                                               onClickPlace: (loc) {
@@ -386,9 +243,10 @@ class _MapPageState extends ConsumerState<MapPage> {
                                               initialCenter:
                                                   mapState.currentLocation!,
                                               onClose: () {
-                                                setState(() {
-                                                  _selectedFeatureIndex = 2;
-                                                });
+                                                ref
+                                                    .read(mapNotifierProvider
+                                                        .notifier)
+                                                    .updateSelectedChipItem(2);
                                                 _pageController.jumpToPage(2);
                                               },
                                               onSave: (location, title) async {
@@ -415,9 +273,10 @@ class _MapPageState extends ConsumerState<MapPage> {
                                                         .notifier)
                                                     .getPlaces(mapState
                                                         .currentCircleId);
-                                                setState(() {
-                                                  _selectedFeatureIndex = 2;
-                                                });
+                                                ref
+                                                    .read(mapNotifierProvider
+                                                        .notifier)
+                                                    .updateSelectedChipItem(2);
                                                 _pageController.jumpToPage(2);
                                               },
                                             ),
@@ -432,44 +291,30 @@ class _MapPageState extends ConsumerState<MapPage> {
                     );
                   },
                 ),
+                MessageOverlay(
+                  messageProvider: globalMessageNotifier,
+                  messageType: MessageType.info,
+                ),
+                if (isLoading) LoadingIndicator()
               ],
             ),
     );
   }
 
-  Widget _buildTabChip({
-    required IconData icon,
-    required int index,
-    required BuildContext context,
-  }) {
-    final isSelected = _selectedFeatureIndex == index;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedFeatureIndex = index;
-        });
-        _pageController.animateToPage(
-          index,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-        );
-      },
-      child: Chip(
-        labelPadding: const EdgeInsets.symmetric(horizontal: 16.0),
-        label:
-            Icon(icon, color: isSelected ? AppColors.white : AppColors.black),
-        backgroundColor: isSelected ? AppColors.primaryBlue : null,
-        labelStyle: TextStyle(color: isSelected ? Colors.white : null),
-      ),
-    );
+  Future<void> loadNewCircle(CircleModel circle) async {
+    await ref
+        .read(mapNotifierProvider.notifier)
+        .loadCircleDetails(circle, _mapController);
+    await ref.read(mapNotifierProvider.notifier).getPlaces(circle.id);
   }
 
-  @override
-  void dispose() {
-    _locationService.dispose();
-    _scrollableController.dispose();
-    _pageController.dispose();
-    super.dispose();
+  void _recenterMap() {
+    final loc = ref.read(mapNotifierProvider).currentLocation;
+    if (loc != null) _mapController.move(loc, 13.0);
+  }
+
+  void _toggleLiveLocation() async {
+    await ref.read(mapNotifierProvider.notifier).startForegroundTask();
   }
 }
 

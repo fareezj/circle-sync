@@ -1,9 +1,12 @@
 import 'package:circle_sync/features/circles/presentation/providers/circle_providers.dart';
+import 'package:circle_sync/features/map/presentation/routers/circle_navigation_router.dart';
+import 'package:circle_sync/widgets/confirm_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class AddCircleSheet extends ConsumerStatefulWidget {
-  const AddCircleSheet({super.key});
+  final AddCircleArgs args;
+  const AddCircleSheet({super.key, required this.args});
 
   @override
   ConsumerState<ConsumerStatefulWidget> createState() => _AddCircleSheetState();
@@ -19,6 +22,12 @@ class _AddCircleSheetState extends ConsumerState<AddCircleSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          IconButton(
+              onPressed: () {
+                circleSheetNavKey.currentState!.pop();
+              },
+              icon: Icon(Icons.chevron_left)),
+          const SizedBox(height: 18),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -28,7 +37,7 @@ class _AddCircleSheetState extends ConsumerState<AddCircleSheet> {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           TextField(
             controller: _circleNameController,
             decoration: InputDecoration(
@@ -36,25 +45,17 @@ class _AddCircleSheetState extends ConsumerState<AddCircleSheet> {
               border: OutlineInputBorder(),
             ),
           ),
-          const SizedBox(height: 16),
-          TextField(
-            decoration: InputDecoration(
-              labelText: 'Circle Description',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () {
-              // Handle circle creation logic here
-              Navigator.pop(context);
-              ref
+          Spacer(),
+          ConfirmButton(
+            onClick: () async {
+              await ref
                   .read(circleNotifierProvider.notifier)
-                  .createCircle(_circleNameController.text);
+                  .createCircle(ref, _circleNameController.text, () {
+                widget.args.onAddedCircle();
+              });
             },
-            child: const Text('Create Circle'),
+            title: 'Create Circle',
           ),
-          const SizedBox(height: 16),
         ],
       ),
     );

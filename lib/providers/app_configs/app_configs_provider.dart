@@ -66,3 +66,16 @@ class GlobalMessageNotifier extends StateNotifier<String?> {
 final globalMessageNotifier =
     StateNotifierProvider.autoDispose<GlobalMessageNotifier, String?>(
         (ref) => GlobalMessageNotifier());
+
+class BaseLoadingNotifier extends StateNotifier<bool> {
+  BaseLoadingNotifier() : super(false);
+
+  void setLoading(bool isLoading) {
+    state = false;
+    state = isLoading;
+  }
+}
+
+final baseLoadingNotifier =
+    StateNotifierProvider.autoDispose<BaseLoadingNotifier, bool>(
+        (ref) => BaseLoadingNotifier());

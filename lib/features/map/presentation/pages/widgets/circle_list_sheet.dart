@@ -1,13 +1,12 @@
-import 'package:circle_sync/models/circle_model.dart';
+import 'package:circle_sync/features/map/presentation/routers/circle_navigation_router.dart';
+import 'package:circle_sync/widgets/confirm_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class CircleListSheet extends ConsumerStatefulWidget {
-  final Function(CircleModel) onCircleTap;
-  final List<CircleModel> circleList;
+  final CircleSheetArgs args;
 
-  const CircleListSheet(
-      {super.key, required this.onCircleTap, required this.circleList});
+  const CircleListSheet({super.key, required this.args});
 
   @override
   ConsumerState<ConsumerStatefulWidget> createState() =>
@@ -30,31 +29,44 @@ class _CircleListSheetState extends ConsumerState<CircleListSheet> {
                 'Your Circles',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
-              IconButton(
-                icon: const Icon(Icons.add),
-                onPressed: () {
-                  // Handle add circle action
-                },
-              ),
             ],
           ),
           const SizedBox(height: 8),
           // List of circles will be displayed here
           Expanded(
             child: ListView.builder(
-              itemCount:
-                  widget.circleList.length, // Replace with actual circle count
+              itemCount: widget
+                  .args.circleList.length, // Replace with actual circle count
               itemBuilder: (context, index) {
                 return ListTile(
-                  title: Text(widget.circleList[index]
+                  title: Text(widget.args.circleList[index]
                       .name), // Replace with actual circle name
                   onTap: () {
-                    widget.onCircleTap(widget.circleList[index]);
+                    widget.args.onCircleTap(widget.args.circleList[index]);
                   },
                 );
               },
             ),
           ),
+          Row(
+            children: [
+              Expanded(
+                  child: ConfirmButton(
+                      onClick: () {
+                        circleSheetNavKey.currentState!
+                            .pushNamed('/add-circle');
+                      },
+                      title: 'Create a circle')),
+              SizedBox(width: 12),
+              Expanded(
+                  child: ConfirmButton(
+                      onClick: () {
+                        circleSheetNavKey.currentState!
+                            .pushNamed('/join-circle');
+                      },
+                      title: 'Join a circle')),
+            ],
+          )
         ],
       ),
     );

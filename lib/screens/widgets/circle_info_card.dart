@@ -1,4 +1,5 @@
 import 'package:circle_sync/features/map/presentation/pages/widgets/circle_list_sheet.dart';
+import 'package:circle_sync/features/map/presentation/routers/circle_navigation_router.dart';
 import 'package:circle_sync/models/circle_model.dart';
 import 'package:flutter/material.dart';
 
@@ -7,7 +8,8 @@ class CircleInfoCard extends StatelessWidget {
   final String? circleName;
   List<CircleModel> circleList;
   final Function(CircleModel) onCircleTap;
-  final VoidCallback onCreateCircle;
+  final VoidCallback onCircleCreated;
+  final VoidCallback onJoinedCircle;
 
   CircleInfoCard({
     super.key,
@@ -15,7 +17,8 @@ class CircleInfoCard extends StatelessWidget {
     required this.circleList,
     required this.hasCircle,
     required this.circleName,
-    required this.onCreateCircle,
+    required this.onCircleCreated,
+    required this.onJoinedCircle,
   });
 
   @override
@@ -33,10 +36,10 @@ class CircleInfoCard extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
-              ElevatedButton(
-                onPressed: onCreateCircle,
-                child: const Text('Create Circle'),
-              ),
+              // ElevatedButton(
+              //   onPressed: onCreateCircle,
+              //   child: const Text('Create Circle'),
+              // ),
             ],
           ),
         ),
@@ -49,9 +52,19 @@ class CircleInfoCard extends StatelessWidget {
       onTap: () {
         showModalBottomSheet(
           context: context,
-          builder: (_) => CircleListSheet(
-            circleList: circleList,
-            onCircleTap: (p0) => onCircleTap(p0),
+          builder: (_) => CircleNavigationRouter(
+            circleListArgs: CircleSheetArgs(
+              circleList: circleList,
+              onCircleTap: (p0) => onCircleTap(p0),
+            ),
+            addCircleArgs: AddCircleArgs(() {
+              Navigator.pop(context);
+              onCircleCreated();
+            }),
+            joinCircleArgs: JoinCircleArgs(() {
+              Navigator.pop(context);
+              onCircleCreated();
+            }),
           ),
         );
       },

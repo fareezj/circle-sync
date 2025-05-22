@@ -20,6 +20,7 @@ class MapPageState {
   final List<LatLng> osrmRoutePoints;
   final List<LatLng> trackingPoints;
   final Map<String, LatLng> otherUsersLocations;
+  final int selectedChipItem;
 
   MapPageState({
     required this.isLoading,
@@ -38,8 +39,8 @@ class MapPageState {
     this.osrmRoutePoints = const [],
     this.trackingPoints = const [],
     this.otherUsersLocations = const {},
+    this.selectedChipItem = 0,
   });
-
   factory MapPageState.initial() {
     return MapPageState(
       isLoading: false,
@@ -57,9 +58,9 @@ class MapPageState {
       osrmRoutePoints: [],
       trackingPoints: [],
       otherUsersLocations: {},
+      selectedChipItem: 0,
     );
   }
-
   MapPageState copyWith({
     List<PlacesModel>? placeList,
     bool? isLoading,
@@ -77,6 +78,7 @@ class MapPageState {
     List<LatLng>? osrmRoutePoints,
     List<LatLng>? trackingPoints,
     Map<String, LatLng>? otherUsersLocations,
+    int? selectedChipItem,
   }) {
     return MapPageState(
       isLoading: isLoading ?? this.isLoading,
@@ -95,6 +97,7 @@ class MapPageState {
       osrmRoutePoints: osrmRoutePoints ?? this.osrmRoutePoints,
       trackingPoints: trackingPoints ?? this.trackingPoints,
       otherUsersLocations: otherUsersLocations ?? this.otherUsersLocations,
+      selectedChipItem: selectedChipItem ?? this.selectedChipItem,
     );
   }
 }

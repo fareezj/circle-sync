@@ -34,6 +34,10 @@ class MapNotifier extends StateNotifier<MapPageState> {
     state = state.copyWith(selectedMember: member);
   }
 
+  void updateSelectedChipItem(int index) {
+    state = state.copyWith(selectedChipItem: index);
+  }
+
   Future<void> startForegroundTask() async {
     bool hasPermissions = await Permissions.requestLocationPermissions();
     if (hasPermissions) {
@@ -57,8 +61,9 @@ class MapNotifier extends StateNotifier<MapPageState> {
     } else {}
   }
 
-  Future<CircleModel?> loadInitialCircle() async {
+  Future<CircleModel?> loadInitialCircle({bool getLatestCircle = false}) async {
     final circles = await circleUsecase.getJoinedCircles();
+
     return circles.fold((l) {
       state = state.copyWith(
         isLoading: false,
@@ -67,21 +72,50 @@ class MapNotifier extends StateNotifier<MapPageState> {
       );
       return null;
     }, (circles) async {
-      ref.read(mapNotifierProvider.notifier).getPlaces(circles[0].id);
-      final members = await circleUsecase.getCircleMembers(circles[0].id);
+      if (circles.isEmpty) {
+        state = state.copyWith(
+          isLoading: false,
+          hasCircle: false,
+          joinedCircles: [],
+          currentCircleId: '',
+          circleName: null,
+        );
+        return null;
+      }
+
+      for (var e in circles) {
+        print('Raw circles data: ${e.name}');
+      }
+
+      CircleModel pointedCircle = getLatestCircle
+          ? circles.reduce((a, b) {
+              print(
+                  'Comparing ${a.name} (${a.dateCreated}) with ${b.name} (${b.dateCreated})');
+              return a.dateCreated.isAfter(b.dateCreated) ? a : b;
+            })
+          : circles.first;
+
+      print(
+          'Selected circle: ${pointedCircle.name} (${pointedCircle.dateCreated})');
+
+      // Update state with the selected circle
+      final members = await circleUsecase.getCircleMembers(pointedCircle.id);
       state = state.copyWith(
         isLoading: false,
-        hasCircle: circles.isNotEmpty,
+        hasCircle: true,
         joinedCircles: circles,
-        currentCircleId: circles.isNotEmpty ? circles[0].id : '',
-        circleName: circles.isNotEmpty ? circles[0].name : '',
+        currentCircleId: pointedCircle.id,
+        circleName: pointedCircle.name,
         circleMembers: members.fold(
           (l) => [],
           (members) => members,
         ),
       );
-      return circles[0];
-      // await loadCircleDetails(circles[0].id);
+
+      // Load places for the selected circle
+      await ref.read(mapNotifierProvider.notifier).getPlaces(pointedCircle.id);
+
+      return pointedCircle;
     });
   }
 
@@ -91,9 +125,10 @@ class MapNotifier extends StateNotifier<MapPageState> {
       _enterStaticMode();
       return;
     }
-    final members = await circleUsecase.getCircleMembers(circle.id);
-    print('CIRCLE MEMBERS: $members');
 
+    final members = await circleUsecase.getCircleMembers(circle.id);
+
+    // Update state with the new circle details
     state = state.copyWith(
       isLoading: false,
       hasCircle: true,
@@ -104,6 +139,7 @@ class MapNotifier extends StateNotifier<MapPageState> {
         (members) => members,
       ),
     );
+
     try {
       // PAUSE LIVE LOCATION
       // await _locationService.startForegroundTask();
@@ -124,9 +160,15 @@ class MapNotifier extends StateNotifier<MapPageState> {
       //     mapController.move(current, 13.0);
       //   },
       // );
-
+      // Subscribe to location updates
       subscribeToLocationUpdates();
       subscribeToOtherUsersLocations();
+
+      // Recenter the map to the new circle's location
+      final currentLocation = state.currentLocation;
+      if (currentLocation != null) {
+        mapController.move(currentLocation, 13.0);
+      }
     } catch (_) {
       _enterStaticMode();
     }

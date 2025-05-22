@@ -1,6 +1,8 @@
 import 'package:circle_sync/features/circles/data/models/circle_model.dart';
 import 'package:circle_sync/features/circles/domain/usecases/circle_usecase.dart';
+import 'package:circle_sync/features/map/presentation/routers/circle_navigation_router.dart';
 import 'package:circle_sync/models/circle_model.dart';
+import 'package:circle_sync/providers/app_configs/app_configs_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class CircleNotifier extends StateNotifier<CirclePageState> {
@@ -8,17 +10,40 @@ class CircleNotifier extends StateNotifier<CirclePageState> {
   CircleUsecase circleUsecase;
   CircleNotifier(this.ref, this.circleUsecase) : super(CirclePageState(false));
 
-  Future<void> createCircle(String circleName) async {
+  Future<void> createCircle(
+      WidgetRef ref, String circleName, Function() onSuccess) async {
     try {
-      await circleUsecase.createCircle(circleName);
+      state = state.copyWith(isLoading: true);
+      final result = await circleUsecase.createCircle(circleName);
+      result.fold((_) {
+        ref
+            .read(globalMessageNotifier.notifier)
+            .setMessage('Something went wrong, please try again later');
+      }, (res) {
+        ref.read(globalMessageNotifier.notifier).setMessage('Circle created!');
+        onSuccess();
+      });
     } catch (e) {
       throw Exception(e);
+    } finally {
+      state = state.copyWith(isLoading: false);
+      circleSheetNavKey.currentState!.pop();
     }
   }
 
-  Future<void> joinCircle() async {
+  Future<void> joinCircle(String code, Function() onSuccess) async {
     try {
-      await circleUsecase.joinCircle('Y7FC');
+      final result = await circleUsecase.joinCircle(code);
+      result.fold((_) {
+        ref
+            .read(globalMessageNotifier.notifier)
+            .setMessage('Something went wrong, please try again later');
+      }, (res) {
+        ref
+            .read(globalMessageNotifier.notifier)
+            .setMessage('New circle joined!');
+        onSuccess();
+      });
     } catch (e) {
       throw Exception(e);
     }
