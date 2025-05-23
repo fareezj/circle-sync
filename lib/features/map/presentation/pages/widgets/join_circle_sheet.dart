@@ -80,24 +80,21 @@ class _JoinCircleSheetState extends ConsumerState<JoinCircleSheet> {
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          // ── header row ───────────────────────────────────────────
-          Row(children: [
+          if (widget.args.showBack)
             IconButton(
                 onPressed: () {
                   circleSheetNavKey.currentState!.pop();
                 },
                 icon: Icon(Icons.chevron_left)),
-            Expanded(
-              child: Center(
-                child: Text(
-                  'Join a Circle',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-              ),
+          // ── header row ───────────────────────────────────────────
+          Center(
+            child: Text(
+              'Join a Circle',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            // invisible spacer to balance the close icon
-            SizedBox(width: 48),
-          ]),
+          ),
+          // invisible spacer to balance the close icon
+          SizedBox(width: 48),
 
           SizedBox(height: 24),
 

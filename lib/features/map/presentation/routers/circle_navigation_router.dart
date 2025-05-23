@@ -10,9 +10,11 @@ class CircleNavigationRouter extends StatelessWidget {
   final CircleSheetArgs circleListArgs;
   final AddCircleArgs addCircleArgs;
   final JoinCircleArgs joinCircleArgs;
+  final String? initialRoute;
 
   const CircleNavigationRouter({
     super.key,
+    this.initialRoute,
     required this.circleListArgs,
     required this.addCircleArgs,
     required this.joinCircleArgs,
@@ -22,6 +24,7 @@ class CircleNavigationRouter extends StatelessWidget {
   Widget build(BuildContext context) {
     return Navigator(
       key: circleSheetNavKey,
+      initialRoute: initialRoute,
       onGenerateRoute: (RouteSettings settings) {
         Widget page;
         switch (settings.name) {
@@ -62,10 +65,12 @@ class CircleSheetArgs {
 
 class AddCircleArgs {
   final VoidCallback onAddedCircle;
-  AddCircleArgs(this.onAddedCircle);
+  final bool showBack;
+  AddCircleArgs({required this.onAddedCircle, required this.showBack});
 }
 
 class JoinCircleArgs {
   final VoidCallback onJoinedCircle;
-  JoinCircleArgs(this.onJoinedCircle);
+  final bool showBack;
+  JoinCircleArgs({required this.onJoinedCircle, required this.showBack});
 }

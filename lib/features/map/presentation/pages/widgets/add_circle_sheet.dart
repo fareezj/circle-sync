@@ -22,11 +22,12 @@ class _AddCircleSheetState extends ConsumerState<AddCircleSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          IconButton(
-              onPressed: () {
-                circleSheetNavKey.currentState!.pop();
-              },
-              icon: Icon(Icons.chevron_left)),
+          if (widget.args.showBack)
+            IconButton(
+                onPressed: () {
+                  circleSheetNavKey.currentState!.pop();
+                },
+                icon: Icon(Icons.chevron_left)),
           const SizedBox(height: 18),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,

@@ -1,17 +1,19 @@
+import 'package:flutter/material.dart';
 import 'package:circle_sync/features/map/presentation/pages/widgets/circle_list_sheet.dart';
 import 'package:circle_sync/features/map/presentation/routers/circle_navigation_router.dart';
 import 'package:circle_sync/models/circle_model.dart';
-import 'package:flutter/material.dart';
+import 'package:circle_sync/widgets/confirm_button.dart';
+import 'package:circle_sync/widgets/text_widgets.dart';
 
 class CircleInfoCard extends StatelessWidget {
   final bool hasCircle;
   final String? circleName;
-  List<CircleModel> circleList;
+  final List<CircleModel> circleList;
   final Function(CircleModel) onCircleTap;
   final VoidCallback onCircleCreated;
   final VoidCallback onJoinedCircle;
 
-  CircleInfoCard({
+  const CircleInfoCard({
     super.key,
     required this.onCircleTap,
     required this.circleList,
@@ -21,62 +23,110 @@ class CircleInfoCard extends StatelessWidget {
     required this.onJoinedCircle,
   });
 
-  @override
-  Widget build(BuildContext context) {
-    if (!hasCircle) {
-      return Card(
-        color: Colors.white.withOpacity(0.9),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'You need to create a circle to enable location sharing and tracking.',
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              // ElevatedButton(
-              //   onPressed: onCreateCircle,
-              //   child: const Text('Create Circle'),
-              // ),
-            ],
+  void onShowCircleModal({
+    required BuildContext context,
+    String? initialRoute,
+    bool onShowBack = true,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext modalContext) {
+        return CircleNavigationRouter(
+          initialRoute: initialRoute,
+          circleListArgs: CircleSheetArgs(
+            circleList: circleList,
+            onCircleTap: (circle) {
+              Navigator.pop(modalContext); // Close the modal
+              onCircleTap(circle); // Trigger the callback
+            },
           ),
-        ),
-      );
-    }
-
-    if (circleName == null) return const SizedBox.shrink();
-
-    return GestureDetector(
-      onTap: () {
-        showModalBottomSheet(
-          context: context,
-          builder: (_) => CircleNavigationRouter(
-            circleListArgs: CircleSheetArgs(
-              circleList: circleList,
-              onCircleTap: (p0) => onCircleTap(p0),
-            ),
-            addCircleArgs: AddCircleArgs(() {
-              Navigator.pop(context);
-              onCircleCreated();
-            }),
-            joinCircleArgs: JoinCircleArgs(() {
-              Navigator.pop(context);
-              onCircleCreated();
-            }),
+          addCircleArgs: AddCircleArgs(
+            showBack: onShowBack,
+            onAddedCircle: () {
+              Navigator.pop(modalContext); // Close the modal
+              onCircleCreated(); // Trigger the callback
+            },
+          ),
+          joinCircleArgs: JoinCircleArgs(
+            showBack: onShowBack,
+            onJoinedCircle: () {
+              Navigator.pop(modalContext); // Close the modal
+              onJoinedCircle(); // Trigger the callback
+            },
           ),
         );
       },
-      child: Card(
-        color: Colors.white.withOpacity(0.9),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Text(
-            circleName!,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-        ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => onShowCircleModal(context: context, initialRoute: null),
+      child: Column(
+        children: [
+          if (!hasCircle) ...[
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Card(
+                color: Colors.white.withOpacity(0.9),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextWidgets.mainRegular(
+                        title:
+                            'You need to create a circle to enable location sharing and tracking.',
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ConfirmButton(
+                              onClick: () {
+                                onShowCircleModal(
+                                    context: context,
+                                    initialRoute: '/add-circle',
+                                    onShowBack: false);
+                              },
+                              title: 'Create circle',
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: ConfirmButton(
+                              onClick: () {
+                                onShowCircleModal(
+                                    context: context,
+                                    initialRoute: '/join-circle',
+                                    onShowBack: false);
+                              },
+                              title: 'Join circle',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ] else ...[
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Text(
+                circleName!,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

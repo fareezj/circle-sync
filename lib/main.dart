@@ -98,7 +98,7 @@ class _CircleSyncState extends ConsumerState<CircleSync> {
             builder: (context, snapshot) {
               final isLoggedIn = snapshot.data ?? false;
               return isLoggedIn == 'true'
-                  ? const LoginPage()
+                  ? const MainPage()
                   : const LoginPage();
             },
           );
