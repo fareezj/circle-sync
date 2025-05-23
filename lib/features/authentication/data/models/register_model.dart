@@ -1,5 +1,7 @@
 class RegisterPageModel {
   final bool isLoading;
+  final bool isPasswordObscure;
+  final bool isConfirmPasswordObscure;
   final String email;
   final String password;
   final String confirmPassword;
@@ -9,6 +11,8 @@ class RegisterPageModel {
 
   RegisterPageModel({
     required this.isLoading,
+    required this.isPasswordObscure,
+    required this.isConfirmPasswordObscure,
     required this.email,
     required this.password,
     required this.confirmPassword,
@@ -19,6 +23,8 @@ class RegisterPageModel {
 
   RegisterPageModel.initial()
       : isLoading = false,
+        isPasswordObscure = true,
+        isConfirmPasswordObscure = true,
         email = '',
         password = '',
         confirmPassword = '',
@@ -28,6 +34,8 @@ class RegisterPageModel {
 
   RegisterPageModel copyWith({
     bool? isLoading,
+    bool? isPasswordObscure,
+    bool? isConfirmPasswordObscure,
     String? email,
     String? password,
     String? confirmPassword,
@@ -37,6 +45,9 @@ class RegisterPageModel {
   }) {
     return RegisterPageModel(
       isLoading: isLoading ?? this.isLoading,
+      isPasswordObscure: isPasswordObscure ?? this.isPasswordObscure,
+      isConfirmPasswordObscure:
+          isConfirmPasswordObscure ?? this.isConfirmPasswordObscure,
       email: email ?? this.email,
       password: password ?? this.password,
       confirmPassword: confirmPassword ?? this.confirmPassword,
