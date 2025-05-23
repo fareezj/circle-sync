@@ -6,6 +6,7 @@ import 'package:circle_sync/features/authentication/presentation/pages/login_pag
 import 'package:circle_sync/route_generator.dart';
 import 'package:circle_sync/features/base/presentation/pages/main_screen.dart';
 import 'package:circle_sync/services/location_service.dart';
+import 'package:circle_sync/utils/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,6 +18,8 @@ import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -82,10 +85,11 @@ class _CircleSyncState extends ConsumerState<CircleSync> {
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        scaffoldBackgroundColor: AppColors.babyBlueCard,
         useMaterial3: true,
       ),
       onGenerateRoute: RouteGenerator.generateRoute,
+      navigatorKey: navigatorKey,
       home: Consumer(
         builder: (context, ref, child) {
           final isLoggedInProvider = ref.watch(getIsLoggedInProvider.future);
@@ -94,7 +98,7 @@ class _CircleSyncState extends ConsumerState<CircleSync> {
             builder: (context, snapshot) {
               final isLoggedIn = snapshot.data ?? false;
               return isLoggedIn == 'true'
-                  ? const MainPage()
+                  ? const LoginPage()
                   : const LoginPage();
             },
           );

@@ -38,7 +38,6 @@ class _MainPageState extends ConsumerState<MainPage> {
   List<Widget> _screenList(BuildContext context, WidgetRef ref) {
     return <Widget>[
       const MapPage(),
-      const CirclesPage(),
       const AccountPage(),
     ];
   }
@@ -73,11 +72,6 @@ class _MainPageState extends ConsumerState<MainPage> {
           BottomNavigationBarItem(
             icon: Icon(Icons.map),
             label: 'home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'contacts',
-            backgroundColor: Colors.white,
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),

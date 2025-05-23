@@ -28,8 +28,8 @@ class ConfirmButton extends ConsumerWidget {
         width: double.maxFinite,
         padding: const EdgeInsets.symmetric(vertical: 16.0),
         decoration: BoxDecoration(
-          color: isEnabled ? AppColors.bgFillBrand : AppColors.borderGray,
-          borderRadius: const BorderRadius.all(Radius.circular(24.0)),
+          color: isEnabled ? AppColors.primaryBlue : AppColors.borderGray,
+          borderRadius: const BorderRadius.all(Radius.circular(12.0)),
         ),
         child: TextWidgets.mainBold(
           title: title,

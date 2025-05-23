@@ -295,6 +295,10 @@ class _MapPageState extends ConsumerState<MapPage> {
                   messageProvider: globalMessageNotifier,
                   messageType: MessageType.info,
                 ),
+                MessageOverlay(
+                  messageProvider: errorMessageNotifier,
+                  messageType: MessageType.failed,
+                ),
                 if (isLoading) LoadingIndicator()
               ],
             ),

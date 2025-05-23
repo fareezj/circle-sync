@@ -67,6 +67,24 @@ final globalMessageNotifier =
     StateNotifierProvider.autoDispose<GlobalMessageNotifier, String?>(
         (ref) => GlobalMessageNotifier());
 
+// Global message notifier remains unchanged.
+class ErrorMessageNotifier extends StateNotifier<String?> {
+  ErrorMessageNotifier() : super(null);
+
+  void setError(String message) {
+    clearMessage();
+    state = message;
+  }
+
+  void clearMessage() {
+    state = null;
+  }
+}
+
+final errorMessageNotifier =
+    StateNotifierProvider.autoDispose<ErrorMessageNotifier, String?>(
+        (ref) => ErrorMessageNotifier());
+
 class BaseLoadingNotifier extends StateNotifier<bool> {
   BaseLoadingNotifier() : super(false);
 

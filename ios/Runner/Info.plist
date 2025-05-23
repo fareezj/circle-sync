@@ -2,27 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>NSLocationAlwaysUsageDescription</key>
-	<string>Need this for live location update</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Your message when requesting foreground location</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Your message when requesting background location</string>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
-	<string>com.pravera.flutter_foreground_task.refresh</string>
+		<string>com.pravera.flutter_foreground_task.refresh</string>
 	</array>
-	<key>UIBackgroundModes</key>
-	<array>
-	<string>location</string>
-	<string>remote-notification</string>
-	<string>fetch</string>
-	</array>
-	<key>NSLocationTemporaryUsageDescriptionDictionary</key>
-	<dict>
-	<key>Home</key>
-	<string>The Circle Sync app requires temporary access to the device&apos;s precise location.</string>
-	</dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
@@ -47,6 +30,15 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Your message when requesting background location</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Need this for live location update</string>
+	<key>NSLocationTemporaryUsageDescriptionDictionary</key>
+	<dict>
+		<key>Home</key>
+		<string>The Circle Sync app requires temporary access to the device's precise location.</string>
+	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>This app needs access to location when open.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
@@ -54,6 +46,7 @@
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>
+		<string>fetch</string>
 	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
