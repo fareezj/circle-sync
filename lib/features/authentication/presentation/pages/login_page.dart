@@ -63,6 +63,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     ),
                     const SizedBox(height: 50),
                     ConfirmButton(
+                      isEnabled: formState.allFieldPassed,
                       onClick: () =>
                           ref.read(loginNotifierProvider.notifier).onLogin(ref),
                       title: 'Login',
@@ -82,6 +83,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             child: MessageOverlay(
               messageProvider: errorMessageNotifier,
               messageType: MessageType.failed,
+            ),
+          ),
+          SafeArea(
+            child: MessageOverlay(
+              messageProvider: globalMessageNotifier,
+              messageType: MessageType.info,
             ),
           ),
           if (isLoading) LoadingIndicator()

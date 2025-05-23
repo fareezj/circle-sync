@@ -1,130 +1,127 @@
+import 'package:circle_sync/features/authentication/presentation/providers/register_providers.dart';
+import 'package:circle_sync/providers/app_configs/app_configs_provider.dart';
+import 'package:circle_sync/widgets/confirm_button.dart';
+import 'package:circle_sync/widgets/custom_input.dart';
+import 'package:circle_sync/widgets/global_message.dart';
+import 'package:circle_sync/widgets/loading_indicator.dart';
+import 'package:circle_sync/widgets/message_overlay.dart';
+import 'package:circle_sync/widgets/text_widgets.dart';
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../route_generator.dart';
 
-class RegisterPage extends StatefulWidget {
+class RegisterPage extends ConsumerStatefulWidget {
   const RegisterPage({super.key});
 
   @override
-  State<RegisterPage> createState() => _RegisterPageState();
+  ConsumerState<ConsumerStatefulWidget> createState() => _RegisterPageState();
 }
 
-class _RegisterPageState extends State<RegisterPage> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  String? _errorMessage;
-  bool _isLoading = false;
-
-  SupabaseClient get supabase => Supabase.instance.client;
-
-  Future<void> _register() async {
-    setState(() {
-      _errorMessage = null;
-      _isLoading = true;
-    });
-
-    final email = _emailController.text.trim();
-    final password = _passwordController.text;
-
-    // 1) Sign up with Supabase Auth
-    final authRes = await supabase.auth.signUp(
-      email: email,
-      password: password,
-    );
-    // if (authRes.error != null || authRes.user == null) {
-    //   setState(() {
-    //     _errorMessage = authRes.error?.message ?? 'Signup failed';
-    //     _isLoading    = false;
-    //   });
-    //   return;
-    // }
-    final userId = authRes.user!.id;
-
-    // 2) Insert into 'users' table WITHOUT .execute()
-    final insertRes = await supabase.from('users').insert({
-      'user_id': userId,
-      'email': email,
-      'name': email,
-    })
-        // .select() is optional if you need the row back:
-        .select(); // returns List<Map<String,dynamic>> :contentReference[oaicite:2]{index=2}
-
-    // if (insertRes.error != null) {
-    //   setState(() {
-    //     _errorMessage = insertRes.error!.message;
-    //     _isLoading    = false;
-    //   });
-    //   return;
-    // }
-
-    // 3) On success, navigate away
-    setState(() => _isLoading = false);
-    Navigator.of(context).pushReplacementNamed('/home');
-  }
-
+class _RegisterPageState extends ConsumerState<RegisterPage> {
   @override
   Widget build(BuildContext context) {
+    final isLoading = ref.watch(registerNotifierProvider).isLoading;
+    final formState = ref.watch(registerNotifierProvider);
+
     return Scaffold(
-      appBar: AppBar(
-        leading: GestureDetector(
-          onTap: () => Navigator.pop(context),
-          child: Icon(Icons.chevron_left),
-        ),
-        title: Text('Register'),
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Text(
-                'Register',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 20),
-              TextField(
-                controller: _emailController,
-                decoration: InputDecoration(
-                  labelText: 'Email',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 20),
-              TextField(
-                controller: _passwordController,
-                decoration: InputDecoration(
-                  labelText: 'Password',
-                  border: OutlineInputBorder(),
-                ),
-                obscureText: true,
-              ),
-              const SizedBox(height: 20),
-              if (_isLoading)
-                CircularProgressIndicator()
-              else
-                ElevatedButton(
-                  onPressed: _register,
-                  style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(
-                      vertical: 12,
-                      horizontal: 20,
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 80),
+                    TextWidgets.mainBold(title: 'Register', fontSize: 38),
+                    const SizedBox(height: 40),
+                    CustomInputWidget(
+                      title: 'Name',
+                      isMandatory: false,
+                      hintText: '',
+                      isError: formState.nameError.isNotEmpty,
+                      errorMessage: formState.nameError,
+                      onChanged: (value) => ref
+                          .read(registerNotifierProvider.notifier)
+                          .updateName(value),
                     ),
-                    textStyle: TextStyle(fontSize: 16),
-                  ),
-                  child: Text('Register'),
+                    const SizedBox(height: 20),
+                    CustomInputWidget(
+                      title: 'Email',
+                      isMandatory: false,
+                      hintText: '',
+                      isError: formState.emailError.isNotEmpty,
+                      errorMessage: formState.emailError,
+                      onChanged: (value) => ref
+                          .read(registerNotifierProvider.notifier)
+                          .updateEmail(value),
+                    ),
+                    const SizedBox(height: 20),
+                    CustomInputWidget(
+                      title: 'Password',
+                      isMandatory: false,
+                      hintText: '',
+                      isPassword: true,
+                      isError: formState.passwordError.isNotEmpty,
+                      errorMessage: formState.passwordError,
+                      isObscure: formState.isPasswordObscure,
+                      onSetObscure: () => ref
+                          .read(registerNotifierProvider.notifier)
+                          .togglePasswordVisibility(),
+                      onChanged: (value) => ref
+                          .read(registerNotifierProvider.notifier)
+                          .updatePassword(value),
+                    ),
+                    const SizedBox(height: 20),
+                    CustomInputWidget(
+                      title: 'Confirm Password',
+                      isMandatory: false,
+                      hintText: '',
+                      isPassword: true,
+                      isError: formState.confirmPasswordError.isNotEmpty,
+                      errorMessage: formState.confirmPasswordError,
+                      isObscure: formState.isConfirmPasswordObscure,
+                      onSetObscure: () => ref
+                          .read(registerNotifierProvider.notifier)
+                          .toggleConfirmPasswordVisibility(),
+                      onChanged: (value) => ref
+                          .read(registerNotifierProvider.notifier)
+                          .updateConfirmPassword(value),
+                    ),
+                    const SizedBox(height: 50),
+                    ConfirmButton(
+                      isEnabled: formState.allFieldPassed,
+                      onClick: () => ref
+                          .read(registerNotifierProvider.notifier)
+                          .onRegister(ref),
+                      title: 'Register',
+                    ),
+                    const SizedBox(height: 20),
+                    ConfirmButton(
+                      onClick: () => Navigator.pushNamed(
+                          context, RouteGenerator.loginPage),
+                      title: 'Login',
+                    ),
+                  ],
                 ),
-              if (_errorMessage != null) ...[
-                const SizedBox(height: 20),
-                Text(
-                  _errorMessage!,
-                  style: TextStyle(color: Colors.red),
-                ),
-              ],
-            ],
+              ),
+            ),
           ),
-        ),
+          SafeArea(
+            child: MessageOverlay(
+              messageProvider: errorMessageNotifier,
+              messageType: MessageType.failed,
+            ),
+          ),
+          SafeArea(
+            child: MessageOverlay(
+              messageProvider: globalMessageNotifier,
+              messageType: MessageType.info,
+            ),
+          ),
+          if (isLoading) LoadingIndicator()
+        ],
       ),
     );
   }
