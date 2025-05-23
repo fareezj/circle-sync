@@ -8,7 +8,6 @@ import 'package:circle_sync/widgets/message_overlay.dart';
 import 'package:circle_sync/widgets/text_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../route_generator.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -19,13 +18,6 @@ class LoginPage extends ConsumerStatefulWidget {
 }
 
 class _LoginPageState extends ConsumerState<LoginPage> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  String? _errorMessage;
-  final bool _isLoading = false;
-
-  SupabaseClient get supabase => Supabase.instance.client;
-
   @override
   Widget build(BuildContext context) {
     final isLoading = ref.watch(loginNotifierProvider).isLoading;
