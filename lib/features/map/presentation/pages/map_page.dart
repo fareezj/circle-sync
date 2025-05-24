@@ -1,4 +1,5 @@
 import 'package:circle_sync/features/map/data/models/map_models.dart';
+import 'package:circle_sync/features/map/presentation/pages/widgets/location_sharing_switch.dart';
 import 'package:circle_sync/features/map/presentation/widgets/add_place_bottom_sheet.dart';
 import 'package:circle_sync/features/map/presentation/widgets/places_bottom_sheet.dart';
 import 'package:circle_sync/features/map/presentation/widgets/tab_chip.dart';
@@ -7,9 +8,11 @@ import 'package:circle_sync/providers/app_configs/app_configs_provider.dart';
 import 'package:circle_sync/screens/widgets/circle_bottom_sheet.dart';
 import 'package:circle_sync/services/geofence_service.dart';
 import 'package:circle_sync/services/location_fg.dart';
+import 'package:circle_sync/utils/app_colors.dart';
 import 'package:circle_sync/widgets/global_message.dart';
 import 'package:circle_sync/widgets/loading_indicator.dart';
 import 'package:circle_sync/widgets/message_overlay.dart';
+import 'package:circle_sync/widgets/text_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:circle_sync/models/map_state_model.dart';
@@ -20,6 +23,7 @@ import 'package:circle_sync/services/location_service.dart';
 import 'package:circle_sync/screens/widgets/map_info.dart';
 import 'package:circle_sync/features/map/presentation/providers/map_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive/hive.dart';
 import 'package:uuid/v4.dart';
 
 class MapPage extends ConsumerStatefulWidget {
@@ -49,9 +53,11 @@ class _MapPageState extends ConsumerState<MapPage> {
   }
 
   Future<void> initCircleDetails({bool getLatestCircle = false}) async {
-    ref
+    final locationSharingStatus =
+        await ref.read(mapNotifierProvider.notifier).getLocationSharingStatus();
+    await ref
         .read(mapNotifierProvider.notifier)
-        .updateLocationSharing(_locationService.isLocationSharing);
+        .updateLocationSharing(locationSharingStatus);
     await ref
         .read(mapNotifierProvider.notifier)
         .loadInitialCircle(getLatestCircle: getLatestCircle)
@@ -118,28 +124,52 @@ class _MapPageState extends ConsumerState<MapPage> {
                 if (mapState.hasCircle)
                   DraggableScrollableSheet(
                     controller: _scrollableController,
-                    initialChildSize: 0.45,
-                    minChildSize: 0.45,
+                    initialChildSize: 0.2,
+                    minChildSize: 0.2,
                     maxChildSize: 1.0,
                     builder: (context, scrollController) {
                       return Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           const SizedBox(height: 10),
                           if (mapState.hasCircle)
-                            ElevatedButton(
-                              onPressed: _recenterMap,
-                              child: const Icon(Icons.center_focus_strong),
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  LocationSharingSwitch(
+                                    isSelected: mapState.isSharingLocation,
+                                    onClick: () {
+                                      mapState.isSharingLocation
+                                          ? ref
+                                              .read(
+                                                  mapNotifierProvider.notifier)
+                                              .stopForegroundTask()
+                                          : ref
+                                              .read(
+                                                  mapNotifierProvider.notifier)
+                                              .startForegroundTask();
+                                    },
+                                  ),
+                                  GestureDetector(
+                                    onTap: () => _recenterMap(),
+                                    child: Container(
+                                      padding: EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        borderRadius:
+                                            BorderRadius.circular(20.0),
+                                        color: AppColors.babyBlueCard,
+                                      ),
+                                      child: const Icon(
+                                        Icons.location_on,
+                                        color: AppColors.primaryBlue,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ElevatedButton(
-                            onPressed: () => _toggleLiveLocation(),
-                            child: const Icon(Icons.play_arrow),
-                          ),
-                          ElevatedButton(
-                            onPressed: () async =>
-                                LocationTask.stopForegroundTask(),
-                            child: const Icon(Icons.stop_circle),
-                          ),
                           Expanded(
                             child: Container(
                               decoration: const BoxDecoration(
@@ -263,8 +293,7 @@ class _MapPageState extends ConsumerState<MapPage> {
                                                           geofenceId: UuidV4()
                                                               .generate(),
                                                           circleId: mapState
-                                                                  .currentCircleId ??
-                                                              '',
+                                                              .currentCircleId,
                                                           centerGeography:
                                                               'POINT(${location.latitude.toStringAsFixed(4)} ${location.longitude.toStringAsFixed(4)})',
                                                           radiusM: 500,
@@ -273,6 +302,7 @@ class _MapPageState extends ConsumerState<MapPage> {
                                                               'You are now at $title vicinity',
                                                         ),
                                                       );
+                                                  await initGeofence(ref);
                                                   await ref
                                                       .read(mapNotifierProvider
                                                           .notifier)

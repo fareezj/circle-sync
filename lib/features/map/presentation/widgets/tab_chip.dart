@@ -32,12 +32,18 @@ class _TabChipState extends ConsumerState<TabChip> {
           curve: Curves.easeInOut,
         );
       },
-      child: Chip(
-        labelPadding: const EdgeInsets.symmetric(horizontal: 16.0),
-        label: Icon(widget.icon,
-            color: widget.isSelected ? AppColors.white : AppColors.black),
-        backgroundColor: widget.isSelected ? AppColors.primaryBlue : null,
-        labelStyle: TextStyle(color: widget.isSelected ? Colors.white : null),
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 32.0),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20.0),
+          color: widget.isSelected
+              ? AppColors.primaryBlue
+              : AppColors.babyBlueCard,
+        ),
+        child: Icon(
+          widget.icon,
+          color: widget.isSelected ? AppColors.white : AppColors.black,
+        ),
       ),
     );
   }

@@ -23,7 +23,19 @@ class MapNotifier extends StateNotifier<MapPageState> {
   MapNotifier(this.mapUsecase, this.circleUsecase, this.ref)
       : super(MapPageState(isLoading: false, placeList: []));
 
-  void updateLocationSharing(bool isSharing) {
+  Future<bool> getLocationSharingStatus() async {
+    final status = await ref.read(getLocationSharingStatusProvider.future);
+    if (status != null && status.isNotEmpty) {
+      return status == 'true';
+    }
+    return false;
+  }
+
+  Future<void> updateLocationSharing(bool isSharing) async {
+    final secureStorage = ref.read(secureStorageServiceProvider);
+    await secureStorage.writeData(
+        'locationSharingStatus', isSharing.toString());
+
     state = state.copyWith(isSharingLocation: isSharing);
   }
 
@@ -39,7 +51,16 @@ class MapNotifier extends StateNotifier<MapPageState> {
     state = state.copyWith(selectedChipItem: index);
   }
 
+  Future<void> stopForegroundTask() async {
+    // Update location sharing flag
+    updateLocationSharing(false);
+    await LocationTask.stopForegroundTask();
+  }
+
   Future<void> startForegroundTask() async {
+    // Update location sharing flag
+    updateLocationSharing(true);
+
     bool hasPermissions = await Permissions.requestLocationPermissions();
     if (hasPermissions) {
       final userId = Supabase.instance.client.auth.currentUser!.id;
