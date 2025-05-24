@@ -29,6 +29,7 @@ final secureStorageDataProvider =
 // Now, create your individual providers using the family provider.
 
 // For keys that don't need additional transformation, simply use the family instance.
+final getCurrentCircleId = secureStorageDataProvider('currentCircleId');
 final getMobileNumberProvider = secureStorageDataProvider('mobileNumber');
 final getPasswordProvider = secureStorageDataProvider('password');
 final getLoginTokenProvider = secureStorageDataProvider('loginToken');

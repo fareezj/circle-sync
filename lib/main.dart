@@ -84,6 +84,7 @@ class _CircleSyncState extends ConsumerState<CircleSync> {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Flutter Demo',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         scaffoldBackgroundColor: AppColors.babyBlueCard,
         useMaterial3: true,

@@ -4,6 +4,7 @@ import 'package:circle_sync/features/map/data/models/map_models.dart';
 import 'package:circle_sync/features/map/data/models/map_state.dart';
 import 'package:circle_sync/features/map/domain/usecases/map_usecase.dart';
 import 'package:circle_sync/models/circle_model.dart';
+import 'package:circle_sync/providers/app_configs/app_configs_provider.dart';
 import 'package:circle_sync/services/location_fg.dart';
 import 'package:circle_sync/services/location_service.dart';
 import 'package:circle_sync/services/permissions.dart';
@@ -82,21 +83,19 @@ class MapNotifier extends StateNotifier<MapPageState> {
         );
         return null;
       }
-
-      for (var e in circles) {
-        print('Raw circles data: ${e.name}');
-      }
+      // Load saved current circle
+      final savedCircleId = await ref.read(getCurrentCircleId.future);
 
       CircleModel pointedCircle = getLatestCircle
-          ? circles.reduce((a, b) {
-              print(
-                  'Comparing ${a.name} (${a.dateCreated}) with ${b.name} (${b.dateCreated})');
-              return a.dateCreated.isAfter(b.dateCreated) ? a : b;
-            })
-          : circles.first;
+          ? circles
+              .reduce((a, b) => a.dateCreated.isAfter(b.dateCreated) ? a : b)
+          : savedCircleId != null
+              ? circles.firstWhere((circle) => circle.id == savedCircleId)
+              : circles.first;
 
-      print(
-          'Selected circle: ${pointedCircle.name} (${pointedCircle.dateCreated})');
+      // Save selected circle
+      final secureStorage = ref.read(secureStorageServiceProvider);
+      await secureStorage.writeData('currentCircleId', pointedCircle.id);
 
       // Update state with the selected circle
       final members = await circleUsecase.getCircleMembers(pointedCircle.id);
@@ -125,6 +124,10 @@ class MapNotifier extends StateNotifier<MapPageState> {
       _enterStaticMode();
       return;
     }
+
+    // Save selected circle
+    final secureStorage = ref.read(secureStorageServiceProvider);
+    await secureStorage.writeData('currentCircleId', circle.id);
 
     final members = await circleUsecase.getCircleMembers(circle.id);
 

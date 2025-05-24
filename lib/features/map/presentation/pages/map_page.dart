@@ -118,8 +118,8 @@ class _MapPageState extends ConsumerState<MapPage> {
                 if (mapState.hasCircle)
                   DraggableScrollableSheet(
                     controller: _scrollableController,
-                    initialChildSize: 0.35,
-                    minChildSize: 0.35,
+                    initialChildSize: 0.45,
+                    minChildSize: 0.45,
                     maxChildSize: 1.0,
                     builder: (context, scrollController) {
                       return Column(

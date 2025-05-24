@@ -1,3 +1,4 @@
+import 'package:circle_sync/utils/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:circle_sync/features/map/presentation/pages/widgets/circle_list_sheet.dart';
 import 'package:circle_sync/features/map/presentation/routers/circle_navigation_router.dart';
@@ -69,7 +70,7 @@ class CircleInfoCard extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Card(
-                color: Colors.white.withOpacity(0.9),
+                color: AppColors.white,
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
@@ -117,11 +118,13 @@ class CircleInfoCard extends StatelessWidget {
             Padding(
               padding:
                   const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              child: Text(
-                circleName!,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+              child: Card(
+                color: AppColors.white,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0, vertical: 8.0),
+                  child:
+                      TextWidgets.mainBold(title: circleName!, fontSize: 18.0),
                 ),
               ),
             ),

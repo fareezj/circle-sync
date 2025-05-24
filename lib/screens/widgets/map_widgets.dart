@@ -1,7 +1,6 @@
 import 'package:circle_sync/features/circles/data/models/circle_model.dart';
 import 'package:circle_sync/features/map/data/models/map_models.dart';
 import 'package:circle_sync/features/map/presentation/providers/map_providers.dart';
-import 'package:circle_sync/screens/widgets/custom_marker.dart';
 import 'package:circle_sync/screens/widgets/member_marker.dart';
 import 'package:circle_sync/screens/widgets/place_marker.dart';
 import 'package:circle_sync/utils/coordinate_extractor.dart';
@@ -72,7 +71,7 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
         markers.add(
           Marker(
             width: 200, // <-- match the child’s max width
-            height: 70, // <-- match the child’s max height
+            height: 100, // <-- match the child’s max height
             point: LatLng(latLng.latitude, latLng.longitude),
             child: GestureDetector(
               onTap: () {

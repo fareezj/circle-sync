@@ -1,4 +1,5 @@
 import 'package:circle_sync/screens/widgets/custom_marker.dart';
+import 'package:circle_sync/utils/app_colors.dart';
 import 'package:circle_sync/widgets/text_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:circle_sync/features/map/data/models/map_models.dart';
@@ -49,27 +50,23 @@ class PlaceMarker extends StatelessWidget {
             ),
           ),
         Container(
-          decoration: BoxDecoration(
-            color: Color(0xFF005C49), // your dark green
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 3),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            'F',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+            padding: EdgeInsets.all(5),
+            decoration: BoxDecoration(
+              color: AppColors.blueBorder, // your dark green
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 3),
             ),
-          ),
-        ),
+            alignment: Alignment.center,
+            child: Icon(
+              Icons.landscape_outlined,
+              color: AppColors.white,
+            )),
         ClipPath(
           clipper: TriangleClipper(),
           child: Container(
             width: 16,
             height: 12,
-            color: Color(0xFF005C49),
+            color: AppColors.blueBorder,
           ),
         ),
       ],

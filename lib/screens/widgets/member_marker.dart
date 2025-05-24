@@ -1,4 +1,5 @@
 import 'package:circle_sync/features/circles/data/models/circle_model.dart';
+import 'package:circle_sync/utils/app_colors.dart';
 import 'package:circle_sync/widgets/text_widgets.dart';
 import 'package:flutter/material.dart';
 
@@ -37,7 +38,10 @@ class MemberMarker extends StatelessWidget {
             ),
           ),
         CircleAvatar(
-          child: Text(user.name.substring(0, 1).toUpperCase()),
+          backgroundColor: AppColors.primaryYellow,
+          child: TextWidgets.mainBold(
+            title: user.name.substring(0, 2).toUpperCase(),
+          ),
         )
       ],
     );
