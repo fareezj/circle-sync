@@ -1,3 +1,4 @@
+import 'package:circle_sync/features/account/presentation/pages/permission_settings_page.dart';
 import 'package:circle_sync/features/circles/presentation/pages/circles_page.dart';
 import 'package:circle_sync/features/authentication/presentation/pages/login_page.dart';
 import 'package:circle_sync/features/base/presentation/pages/main_screen.dart';
@@ -16,6 +17,7 @@ class RouteGenerator {
   static const String mapPage = '/mapPage';
   static const String usersPage = '/usersPage';
   static const String circlePage = '/circlePage';
+  static const String permissionSettings = '/permissionSettings';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -23,6 +25,9 @@ class RouteGenerator {
         return MaterialPageRoute(builder: (_) => const MainPage());
       case RouteGenerator.loginPage:
         return MaterialPageRoute(builder: (_) => const LoginPage());
+      case RouteGenerator.permissionSettings:
+        return MaterialPageRoute(
+            builder: (_) => const PermissionsSettingsPage());
       case RouteGenerator.registerPage:
         return MaterialPageRoute(builder: (_) => const RegisterPage());
       case RouteGenerator.circlePage:
