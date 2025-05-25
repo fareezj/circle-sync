@@ -7,6 +7,7 @@ import 'package:circle_sync/route_generator.dart';
 import 'package:circle_sync/features/base/presentation/pages/main_screen.dart';
 import 'package:circle_sync/services/location_service.dart';
 import 'package:circle_sync/utils/app_colors.dart';
+import 'package:circle_sync/utils/permission_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -44,6 +45,8 @@ void main() async {
   // Use this method to prompt for push notifications.
   // We recommend removing this method after testing and instead use In-App Messages to prompt for notification permission.
   OneSignal.Notifications.requestPermission(false);
+
+  await ensureAlwaysLocation();
 
   FlutterForegroundTask.init(
     androidNotificationOptions: AndroidNotificationOptions(
