@@ -1,13 +1,9 @@
-import 'dart:io';
-
-import 'package:circle_sync/features/map/presentation/pages/map_page.dart';
+import 'package:circle_sync/features/onboarding/presentation/pages/onboarding_page.dart';
 import 'package:circle_sync/providers/app_configs/app_configs_provider.dart';
 import 'package:circle_sync/features/authentication/presentation/pages/login_page.dart';
 import 'package:circle_sync/route_generator.dart';
 import 'package:circle_sync/features/base/presentation/pages/main_screen.dart';
-import 'package:circle_sync/services/location_service.dart';
 import 'package:circle_sync/utils/app_colors.dart';
-import 'package:circle_sync/utils/permission_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -45,8 +41,6 @@ void main() async {
   // Use this method to prompt for push notifications.
   // We recommend removing this method after testing and instead use In-App Messages to prompt for notification permission.
   OneSignal.Notifications.requestPermission(false);
-
-  await ensureAlwaysLocation();
 
   FlutterForegroundTask.init(
     androidNotificationOptions: AndroidNotificationOptions(
@@ -97,13 +91,20 @@ class _CircleSyncState extends ConsumerState<CircleSync> {
       home: Consumer(
         builder: (context, ref, child) {
           final isLoggedInProvider = ref.watch(getIsLoggedInProvider.future);
+          final isOnboardingPassed = ref.watch(getIsOnboardingPassed.future);
           return FutureBuilder(
             future: isLoggedInProvider,
             builder: (context, snapshot) {
               final isLoggedIn = snapshot.data ?? false;
               return isLoggedIn == 'true'
-                  ? const MainPage()
-                  : const LoginPage();
+                  ? MainPage()
+                  : isOnboardingPassed == 'true'
+                      ? OnboardingPage(onFinish: () async {
+                          final secureStorage =
+                              ref.read(secureStorageServiceProvider);
+                          secureStorage.writeData('isOnboardingPassed', 'true');
+                        })
+                      : LoginPage();
             },
           );
         },
