@@ -85,6 +85,8 @@ class MapNotifier extends StateNotifier<MapPageState> {
 
   Future<CircleModel?> loadInitialCircle({bool getLatestCircle = false}) async {
     final circles = await circleUsecase.getJoinedCircles();
+    final username = await ref.watch(getUsernameProvider.future);
+    final userId = await ref.watch(getUserIdProvider.future);
 
     return circles.fold((l) {
       state = state.copyWith(
@@ -129,6 +131,11 @@ class MapNotifier extends StateNotifier<MapPageState> {
         circleMembers: members.fold(
           (l) => [],
           (members) => members,
+        ),
+        currentUser: CircleMembersModel(
+          userId: userId ?? '',
+          name: username ?? '',
+          role: 'owner',
         ),
       );
 

@@ -1,15 +1,14 @@
-import 'package:circle_sync/features/circles/data/models/circle_model.dart';
 import 'package:circle_sync/utils/app_colors.dart';
 import 'package:circle_sync/widgets/text_widgets.dart';
 import 'package:flutter/material.dart';
 
-class MemberMarker extends StatelessWidget {
-  final CircleMembersModel user;
+class UserMarker extends StatelessWidget {
+  final String userName;
   final bool isSelected;
 
-  const MemberMarker({
+  const UserMarker({
     super.key,
-    required this.user,
+    required this.userName,
     this.isSelected = false,
   });
 
@@ -34,13 +33,16 @@ class MemberMarker extends StatelessWidget {
                   ),
                 ],
               ),
-              child: TextWidgets.mainBold(title: user.name, fontSize: 12),
+              child: TextWidgets.mainBold(title: userName, fontSize: 12),
             ),
           ),
         CircleAvatar(
-          backgroundColor: AppColors.primaryYellow,
+          backgroundColor: AppColors.blueBorder,
           child: TextWidgets.mainBold(
-            title: user.name.substring(0, 2).toUpperCase(),
+            color: AppColors.white,
+            title: userName.length > 2
+                ? userName.substring(0, 2).toUpperCase()
+                : 'You',
           ),
         )
       ],

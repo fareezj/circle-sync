@@ -1,8 +1,10 @@
 import 'package:circle_sync/features/circles/data/models/circle_model.dart';
 import 'package:circle_sync/features/map/data/models/map_models.dart';
 import 'package:circle_sync/features/map/presentation/providers/map_providers.dart';
+import 'package:circle_sync/providers/app_configs/app_configs_provider.dart';
 import 'package:circle_sync/screens/widgets/member_marker.dart';
 import 'package:circle_sync/screens/widgets/place_marker.dart';
+import 'package:circle_sync/screens/widgets/user_marker.dart';
 import 'package:circle_sync/utils/coordinate_extractor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -15,6 +17,7 @@ class MapWidget extends ConsumerStatefulWidget {
   final MapState mapState;
   final bool hasCircle;
   final LatLng? selectedPlace;
+  final CircleMembersModel userModel;
   final List<CircleMembersModel>? members;
   final VoidCallback onCurrentLocationTap;
   final List<PlacesModel>? places;
@@ -23,6 +26,7 @@ class MapWidget extends ConsumerStatefulWidget {
   const MapWidget({
     super.key,
     this.places,
+    required this.userModel,
     required this.members,
     required this.mapController,
     required this.mapState,
@@ -54,11 +58,20 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
       markers.add(
         Marker(
           point: widget.mapState.currentLocation!,
-          width: 40,
-          height: 40,
+          width: 200, // <-- match the child’s max width
+          height: 100, // <-- match the child’s max height
           child: GestureDetector(
-            onTap: widget.onCurrentLocationTap,
-            child: const Icon(Icons.my_location, color: Colors.blue, size: 32),
+            onTap: () {
+              ref
+                  .read(mapNotifierProvider.notifier)
+                  .updateSelectedMember(widget.userModel);
+            },
+            child: UserMarker(
+              userName: widget.userModel.name,
+              isSelected:
+                  ref.read(mapNotifierProvider).selectedMember?.userId ==
+                      widget.userModel.userId,
+            ),
           ),
         ),
       );
@@ -106,22 +119,19 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
       markers.add(
         Marker(
           point: loc,
-          width: 40,
-          height: 40,
+          width: 200, // <-- match the child’s max width
+          height: 100, // <-- match the child’s max height
           child: GestureDetector(
             onTap: () {
               ref
                   .read(mapNotifierProvider.notifier)
                   .updateSelectedMember(member);
             },
-            child: FittedBox(
-              fit: BoxFit.cover,
-              child: MemberMarker(
-                user: member,
-                isSelected:
-                    ref.read(mapNotifierProvider).selectedMember?.userId ==
-                        userId,
-              ),
+            child: MemberMarker(
+              user: member,
+              isSelected:
+                  ref.read(mapNotifierProvider).selectedMember?.userId ==
+                      userId,
             ),
           ),
         ),

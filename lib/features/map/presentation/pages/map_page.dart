@@ -1,3 +1,4 @@
+import 'package:circle_sync/features/circles/data/models/circle_model.dart';
 import 'package:circle_sync/features/map/data/models/map_models.dart';
 import 'package:circle_sync/features/map/presentation/pages/widgets/location_sharing_switch.dart';
 import 'package:circle_sync/features/map/presentation/widgets/add_place_bottom_sheet.dart';
@@ -83,6 +84,11 @@ class _MapPageState extends ConsumerState<MapPage> {
                 MapWidget(
                   mapController: _mapController,
                   members: mapState.circleMembers,
+                  userModel: CircleMembersModel(
+                    userId: mapState.currentUser?.userId ?? '',
+                    name: mapState.currentUser?.name ?? '',
+                    role: mapState.currentUser?.role ?? '',
+                  ),
                   mapState: MapState(
                     currentLocation: mapState.currentLocation,
                     osrmRoutePoints: mapState.osrmRoutePoints,
