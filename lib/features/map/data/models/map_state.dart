@@ -22,6 +22,7 @@ class MapPageState {
   final List<LatLng> trackingPoints;
   final Map<String, LatLng> otherUsersLocations;
   final int selectedChipItem;
+  final bool isLocationAlwaysAllowed;
 
   MapPageState({
     required this.isLoading,
@@ -42,6 +43,7 @@ class MapPageState {
     this.trackingPoints = const [],
     this.otherUsersLocations = const {},
     this.selectedChipItem = 0,
+    this.isLocationAlwaysAllowed = false,
   });
   factory MapPageState.initial() {
     return MapPageState(
@@ -63,6 +65,7 @@ class MapPageState {
       trackingPoints: [],
       otherUsersLocations: {},
       selectedChipItem: 0,
+      isLocationAlwaysAllowed: false,
     );
   }
   MapPageState copyWith({
@@ -84,6 +87,7 @@ class MapPageState {
     List<LatLng>? trackingPoints,
     Map<String, LatLng>? otherUsersLocations,
     int? selectedChipItem,
+    bool? isLocationAlwaysAllowed,
   }) {
     return MapPageState(
       isLoading: isLoading ?? this.isLoading,
@@ -104,6 +108,8 @@ class MapPageState {
       trackingPoints: trackingPoints ?? this.trackingPoints,
       otherUsersLocations: otherUsersLocations ?? this.otherUsersLocations,
       selectedChipItem: selectedChipItem ?? this.selectedChipItem,
+      isLocationAlwaysAllowed:
+          isLocationAlwaysAllowed ?? this.isLocationAlwaysAllowed,
     );
   }
 }

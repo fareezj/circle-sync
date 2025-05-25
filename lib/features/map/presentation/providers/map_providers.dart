@@ -12,6 +12,7 @@ import 'package:circle_sync/services/route_service.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class MapNotifier extends StateNotifier<MapPageState> {
@@ -81,6 +82,12 @@ class MapNotifier extends StateNotifier<MapPageState> {
         print('error: $e');
       }
     } else {}
+  }
+
+  Future<void> checkLocationPermisssion() async {
+    final isGranted = await Permission.locationAlways.status;
+    state = state.copyWith(
+        isLocationAlwaysAllowed: isGranted == PermissionStatus.granted);
   }
 
   Future<CircleModel?> loadInitialCircle({bool getLatestCircle = false}) async {

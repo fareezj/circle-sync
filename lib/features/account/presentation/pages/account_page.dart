@@ -49,10 +49,13 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                   TextWidgets.mainBold(title: pageState.name),
                   SizedBox(height: 16.0),
                   TextWidgets.mainBold(title: pageState.email),
+                  SizedBox(height: 16.0),
                   ElevatedButton(
-                      onPressed: () =>
-                          Navigator.pushNamed(context, '/permissionSettings'),
-                      child: Text('permission')),
+                    onPressed: () =>
+                        Navigator.pushNamed(context, '/permissionSettings'),
+                    child: TextWidgets.mainSemiBold(
+                        title: 'App permission', color: AppColors.primaryBlue),
+                  ),
                   SizedBox(height: 50.0),
                   IconButton(
                     icon: Row(

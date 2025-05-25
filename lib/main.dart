@@ -98,7 +98,7 @@ class _CircleSyncState extends ConsumerState<CircleSync> {
               final isLoggedIn = snapshot.data ?? false;
               return isLoggedIn == 'true'
                   ? MainPage()
-                  : isOnboardingPassed == 'true'
+                  : isOnboardingPassed != 'true'
                       ? OnboardingPage(onFinish: () async {
                           final secureStorage =
                               ref.read(secureStorageServiceProvider);

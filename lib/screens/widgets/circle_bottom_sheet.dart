@@ -60,7 +60,8 @@ class CircleBottomSheet extends StatelessWidget {
             SizedBox(height: 8),
             TextWidgets.mainSemiBold(title: 'Created by: $ownerName'),
             TextWidgets.mainSemiBold(
-                title: 'Created at: ${circle!.dateCreated.toString()}'),
+                title: 'Created at: ${circle!.dateCreated.toString()}',
+                textAlign: TextAlign.start),
           ],
         ),
       ),

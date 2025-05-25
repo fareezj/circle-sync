@@ -1,5 +1,6 @@
 import 'package:circle_sync/features/circles/data/models/circle_model.dart';
 import 'package:circle_sync/features/map/data/models/map_models.dart';
+import 'package:circle_sync/features/map/presentation/pages/widgets/error_tooltip.dart';
 import 'package:circle_sync/features/map/presentation/pages/widgets/location_sharing_switch.dart';
 import 'package:circle_sync/features/map/presentation/widgets/add_place_bottom_sheet.dart';
 import 'package:circle_sync/features/map/presentation/widgets/places_bottom_sheet.dart';
@@ -8,12 +9,10 @@ import 'package:circle_sync/models/circle_model.dart';
 import 'package:circle_sync/providers/app_configs/app_configs_provider.dart';
 import 'package:circle_sync/screens/widgets/circle_bottom_sheet.dart';
 import 'package:circle_sync/services/geofence_service.dart';
-import 'package:circle_sync/services/location_fg.dart';
 import 'package:circle_sync/utils/app_colors.dart';
 import 'package:circle_sync/widgets/global_message.dart';
 import 'package:circle_sync/widgets/loading_indicator.dart';
 import 'package:circle_sync/widgets/message_overlay.dart';
-import 'package:circle_sync/widgets/text_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:circle_sync/models/map_state_model.dart';
@@ -24,7 +23,7 @@ import 'package:circle_sync/services/location_service.dart';
 import 'package:circle_sync/screens/widgets/map_info.dart';
 import 'package:circle_sync/features/map/presentation/providers/map_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive/hive.dart';
+import 'package:super_tooltip/super_tooltip.dart';
 import 'package:uuid/v4.dart';
 
 class MapPage extends ConsumerStatefulWidget {
@@ -35,7 +34,7 @@ class MapPage extends ConsumerStatefulWidget {
   ConsumerState<ConsumerStatefulWidget> createState() => _MapPageState();
 }
 
-class _MapPageState extends ConsumerState<MapPage> {
+class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
   final MapController _mapController = MapController();
   final LocationService _locationService = LocationService();
   final DraggableScrollableController _scrollableController =
@@ -46,6 +45,7 @@ class _MapPageState extends ConsumerState<MapPage> {
   void initState() {
     super.initState();
     WidgetsFlutterBinding.ensureInitialized();
+    WidgetsBinding.instance.addObserver(this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await initGeofence(ref);
@@ -53,9 +53,28 @@ class _MapPageState extends ConsumerState<MapPage> {
     });
   }
 
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      print('AWOW PERMISSION RESUMED');
+      checkPermission();
+    }
+  }
+
+  Future<void> checkPermission() async {
+    await ref.read(mapNotifierProvider.notifier).checkLocationPermisssion();
+  }
+
   Future<void> initCircleDetails({bool getLatestCircle = false}) async {
     final locationSharingStatus =
         await ref.read(mapNotifierProvider.notifier).getLocationSharingStatus();
+    await ref.read(mapNotifierProvider.notifier).checkLocationPermisssion();
     await ref
         .read(mapNotifierProvider.notifier)
         .updateLocationSharing(locationSharingStatus);
@@ -107,6 +126,12 @@ class _MapPageState extends ConsumerState<MapPage> {
                   places: mapState.placeList,
                   //showPlaceTooltip: true,
                 ),
+                if (!mapState.isLocationAlwaysAllowed)
+                  Positioned(
+                    top: 70.0,
+                    right: 20.0,
+                    child: ErrorTooltip(),
+                  ),
                 SafeArea(
                   child: CircleInfoCard(
                     circleList: mapState.joinedCircles,
