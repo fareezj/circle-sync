@@ -1,56 +1,61 @@
-import 'package:circle_sync/providers/app_configs/app_configs_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:native_geofence/native_geofence.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 final supabase = Supabase.instance.client;
 
-Future<void> initGeofence(WidgetRef ref) async {
-  print('=== INIT GEOFENCE ===');
-  final userId = await ref.watch(getUserIdProvider.future);
+/// Initializes geofences for a specific circle based on its ID.
+///
+/// - Filters Supabase records by `circle_id`.
+/// - Uses the DB `id` field as the native geofence ID for consistency.
+/// - Ensures no duplicate registrations.
+Future<void> initGeofence({
+  required WidgetRef ref,
+  required String circleId,
+}) async {
+  print('=== INIT GEOFENCE for Circle: $circleId ===');
 
-  // 1) Initialise the native geofence plugin
+  // 1️⃣ Initialize the native geofence plugin
   final manager = NativeGeofenceManager.instance;
   await manager.initialize();
 
-  // 2) Pull existing geofence IDs so we only add the missing ones
+  // 2️⃣ Get already-registered geofence IDs
   final existingIds =
       (await manager.getRegisteredGeofences()).map((g) => g.id).toSet();
 
-  // 3) Fetch your zones from Supabase
-  final resp = await supabase.from('geofences').select('''
-    title,
-    radius_m,
-    center_geography
-  ''');
-  final rows = resp as List<dynamic>;
+  // 3️⃣ Fetch geofences for this circle from Supabase
+  final response = await Supabase.instance.client
+      .from('geofences')
+      .select('geofence_id, title, radius_m, center_geography')
+      .eq('circle_id', circleId);
 
-  print('FETCHED GEOFENCES: ${rows.length} rows');
+  final rows = (response as List<dynamic>);
+  print('Fetched ${rows.length} geofences for circle $circleId');
 
-  // 4) Register each zone if not already present
-  for (var row in rows) {
+  // 4️⃣ Register missing geofences
+  for (final row in rows) {
+    final geoId = row['geofence_id'] as String;
     final title = row['title'] as String;
-    final id = '${title.replaceAll(" ", "_")}|$userId';
-
-    if (existingIds.contains(id)) {
-      print('⚡ Already registered: $title');
+    if (existingIds.contains(geoId)) {
+      print('⚡ Geo "$title" ($geoId) already registered');
       continue;
     }
 
-    // parse WKT "POINT(lat lon)"
+    // Parse WKT "POINT(lat lon)"
     final wkt = row['center_geography'] as String;
     final coords = wkt
         .replaceAll(RegExp(r'POINT\(|\)'), '')
         .split(RegExp(r'\s+'))
         .map(double.parse)
         .toList();
-    final lat = coords[0], lon = coords[1];
+    final lat = coords[0];
+    final lon = coords[1];
     final radius = (row['radius_m'] as num).toDouble();
 
     final fence = Geofence(
-      id: id,
+      id: geoId,
+      // Use precise Location object
       location: Location(latitude: lat, longitude: lon),
       radiusMeters: radius,
       triggers: {
@@ -67,11 +72,12 @@ Future<void> initGeofence(WidgetRef ref) async {
       ),
     );
 
+    // 5️⃣ Create and register the geofence
     await manager.createGeofence(fence, geofenceTriggered);
-    print('➡️ Registered new geofence: $title');
+    print('➡️ Registered new geofence: $title ($geoId)');
   }
 
-  // 5) Verify total active
+  // 6️⃣ Log total active
   final active = await manager.getRegisteredGeofences();
   print('✅ Total active geofences: ${active.length}');
 }

@@ -81,11 +81,14 @@ class _JoinCircleSheetState extends ConsumerState<JoinCircleSheet> {
         padding: const EdgeInsets.all(16.0),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           if (widget.args.showBack)
-            IconButton(
-                onPressed: () {
-                  circleSheetNavKey.currentState!.pop();
-                },
-                icon: Icon(Icons.chevron_left)),
+            Align(
+              alignment: Alignment.topLeft,
+              child: IconButton(
+                  onPressed: () {
+                    circleSheetNavKey.currentState!.pop();
+                  },
+                  icon: Icon(Icons.chevron_left)),
+            ),
           // ── header row ───────────────────────────────────────────
           Center(
             child: Text(

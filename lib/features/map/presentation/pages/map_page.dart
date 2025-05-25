@@ -48,7 +48,6 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await initGeofence(ref);
       await initCircleDetails();
     });
   }
@@ -82,6 +81,7 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
         .read(mapNotifierProvider.notifier)
         .loadInitialCircle(getLatestCircle: getLatestCircle)
         .then((circle) async {
+      await initGeofence(ref: ref, circleId: circle!.id);
       await ref
           .read(mapNotifierProvider.notifier)
           .loadCircleDetails(circle, _mapController);
@@ -333,7 +333,11 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
                                                               'You are now at $title vicinity',
                                                         ),
                                                       );
-                                                  await initGeofence(ref);
+                                                  await initGeofence(
+                                                    ref: ref,
+                                                    circleId: mapState
+                                                        .currentCircleId,
+                                                  );
                                                   await ref
                                                       .read(mapNotifierProvider
                                                           .notifier)
@@ -373,6 +377,7 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
   }
 
   Future<void> loadNewCircle(CircleModel circle) async {
+    await initGeofence(ref: ref, circleId: circle.id);
     await ref
         .read(mapNotifierProvider.notifier)
         .loadCircleDetails(circle, _mapController);

@@ -103,6 +103,7 @@ class _CircleSyncState extends ConsumerState<CircleSync> {
                           final secureStorage =
                               ref.read(secureStorageServiceProvider);
                           secureStorage.writeData('isOnboardingPassed', 'true');
+                          Navigator.pushNamed(context, '/login');
                         })
                       : LoginPage();
             },
