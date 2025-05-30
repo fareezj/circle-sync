@@ -1,17 +1,8 @@
 import 'package:circle_sync/features/account/presentation/pages/account_page.dart';
-import 'package:circle_sync/features/circles/presentation/pages/circles_page.dart';
 import 'package:circle_sync/features/map/presentation/pages/map_page.dart';
 import 'package:circle_sync/utils/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-final mainPageControllerProvider = Provider<PageController>((ref) {
-  final controller = PageController(initialPage: 0);
-  ref.onDispose(() => controller.dispose());
-  return controller;
-});
-
-final transferPageIndexProvider = StateProvider<int>((ref) => 0);
 
 class MainPage extends ConsumerStatefulWidget {
   const MainPage({super.key});
@@ -21,54 +12,48 @@ class MainPage extends ConsumerStatefulWidget {
 }
 
 class _MainPageState extends ConsumerState<MainPage> {
-  int _selectedIndex = 1;
+  late final PageController _pageController;
+  int _selectedIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: _selectedIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   void _onChangedTab(int index) {
-    setState(() {
-      _selectedIndex = index;
-      ref.read(mainPageControllerProvider).jumpToPage(index);
-    });
-  }
-
-  void navigateToTransfer(int pageIndex) {
-    ref.read(transferPageIndexProvider.notifier).state = pageIndex;
-    _onChangedTab(1);
-  }
-
-  List<Widget> _screenList(BuildContext context, WidgetRef ref) {
-    return <Widget>[
-      const MapPage(),
-      const AccountPage(),
-    ];
+    if (_selectedIndex == index) return;
+    setState(() => _selectedIndex = index);
+    _pageController.jumpToPage(index);
   }
 
   @override
   Widget build(BuildContext context) {
-    final pageController = ref.watch(mainPageControllerProvider);
-
     return Scaffold(
       body: PageView(
-        controller: pageController,
+        controller: _pageController,
         onPageChanged: _onChangedTab,
-        children: _screenList(context, ref),
+        children: const [
+          MapPage(),
+          AccountPage(),
+        ],
       ),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: AppColors.white,
         type: BottomNavigationBarType.fixed,
         unselectedItemColor: AppColors.textSecondary,
-        unselectedLabelStyle: const TextStyle(
-          fontSize: 12.0,
-          fontFamily: 'Montserrat',
-          color: AppColors.textSecondary,
-        ),
-        selectedLabelStyle: const TextStyle(
-          fontSize: 12.0,
-          fontFamily: 'Montserrat',
-          color: AppColors.primaryBlue,
-        ),
+        selectedItemColor: Colors.blueGrey,
         showUnselectedLabels: true,
         showSelectedLabels: true,
-        items: <BottomNavigationBarItem>[
+        currentIndex: _selectedIndex,
+        onTap: _onChangedTab,
+        items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.map),
             label: 'home',
@@ -76,12 +61,8 @@ class _MainPageState extends ConsumerState<MainPage> {
           BottomNavigationBarItem(
             icon: Icon(Icons.person),
             label: 'account',
-            backgroundColor: Colors.white,
           ),
         ],
-        currentIndex: _selectedIndex,
-        selectedItemColor: Colors.blueGrey,
-        onTap: _onChangedTab,
       ),
     );
   }

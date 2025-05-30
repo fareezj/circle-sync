@@ -80,36 +80,53 @@ class _CircleSyncState extends ConsumerState<CircleSync> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        scaffoldBackgroundColor: AppColors.babyBlueCard,
-        useMaterial3: true,
-      ),
-      onGenerateRoute: RouteGenerator.generateRoute,
-      navigatorKey: navigatorKey,
-      home: Consumer(
-        builder: (context, ref, child) {
-          final isLoggedInProvider = ref.watch(getIsLoggedInProvider.future);
-          final isOnboardingPassed = ref.watch(getIsOnboardingPassed.future);
-          return FutureBuilder(
-            future: isLoggedInProvider,
-            builder: (context, snapshot) {
-              final isLoggedIn = snapshot.data ?? false;
-              return isLoggedIn == 'true'
-                  ? MainPage()
-                  : isOnboardingPassed != 'true'
-                      ? OnboardingPage(onFinish: () async {
-                          final secureStorage =
-                              ref.read(secureStorageServiceProvider);
-                          secureStorage.writeData('isOnboardingPassed', 'true');
-                          Navigator.pushNamed(context, '/login');
-                        })
-                      : LoginPage();
-            },
-          );
-        },
-      ),
-    );
+        title: 'Flutter Demo',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          scaffoldBackgroundColor: AppColors.babyBlueCard,
+          useMaterial3: true,
+        ),
+        onGenerateRoute: RouteGenerator.generateRoute,
+        navigatorKey: navigatorKey,
+        home: Consumer(
+          builder: (context, ref, child) {
+            return FutureBuilder<String?>(
+              future: ref.watch(getIsLoggedInProvider.future),
+              builder: (context, isLoggedInSnapshot) {
+                if (isLoggedInSnapshot.connectionState ==
+                    ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final isLoggedIn = isLoggedInSnapshot.data ?? false;
+
+                return FutureBuilder<String?>(
+                  future: ref.watch(getIsOnboardingPassed.future),
+                  builder: (context, isOnboardingSnapshot) {
+                    if (isOnboardingSnapshot.connectionState ==
+                        ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    final isOnboardingPassed =
+                        isOnboardingSnapshot.data ?? false;
+
+                    return isLoggedIn == 'true'
+                        ? const MainPage()
+                        : isOnboardingPassed == 'true'
+                            ? const LoginPage()
+                            : OnboardingPage(onFinish: () async {
+                                final secureStorage =
+                                    ref.read(secureStorageServiceProvider);
+                                await secureStorage.writeData(
+                                    'isOnboardingPassed', 'true');
+                                Navigator.pushNamed(context, '/login');
+                              });
+                  },
+                );
+              },
+            );
+          },
+        ));
   }
 }

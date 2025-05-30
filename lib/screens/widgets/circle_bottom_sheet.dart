@@ -1,5 +1,4 @@
 import 'package:circle_sync/features/circles/data/models/circle_model.dart';
-import 'package:circle_sync/features/map/presentation/pages/widgets/circle_list_sheet.dart';
 import 'package:circle_sync/models/circle_model.dart';
 import 'package:circle_sync/widgets/text_widgets.dart';
 import 'package:flutter/material.dart';
