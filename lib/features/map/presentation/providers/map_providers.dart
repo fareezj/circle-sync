@@ -231,8 +231,10 @@ class MapNotifier extends StateNotifier<MapPageState> {
   }
 
   void subscribeToOtherUsersLocations() {
+    final currentUserId = Supabase.instance.client.auth.currentUser!.id;
     _locationService.subscribeToOtherUsersLocations(
       circleId: state.currentCircleId,
+      currentUserId: currentUserId,
       onLocationsUpdate: (others) {
         print('Other users locations now1: $others');
         state = state.copyWith(otherUsersLocations: others);

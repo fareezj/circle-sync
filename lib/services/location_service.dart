@@ -5,7 +5,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:uuid/uuid.dart';
 
 class LocationService {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -120,7 +119,11 @@ class LocationService {
 
     // Ensure current user
     final user = _supabase.auth.currentUser;
-    if (user == null) return;
+    print('Supabase current user: ${user?.id}');
+    if (user == null) {
+      print('ERROR: No Supabase user authenticated!');
+      return;
+    }
     final uid = user.id;
 
     Stream<Position> posStream = _useSimulation
@@ -155,13 +158,11 @@ class LocationService {
       print('updating location lat: ${loc.latitude}, lng: ${loc.longitude}');
       await _supabase.from('locations').upsert(
         {
-          'location_id': Uuid().v4(),
-          'created_at': DateTime.now().toIso8601String(),
           'circle_id': circleId,
           'user_id': userId,
           'lat': loc.latitude,
           'lng': loc.longitude,
-          'is_paused': isPaused,
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
         },
         onConflict: 'circle_id, user_id',
       ).select();
@@ -170,29 +171,35 @@ class LocationService {
     }
   }
 
-  /// Stream other members’ locations in real time
+  /// Stream other members' locations in real time
   void subscribeToOtherUsersLocations({
     required String circleId,
+    required String currentUserId, // Add this parameter to match map_page.dart
     required Function(Map<String, LatLng>) onLocationsUpdate,
   }) {
     _realtimeSubscription = _supabase
         .from('locations') // 1) subscribe to the table
-        .stream(primaryKey: ['location_id']) // 2) tell it what your PK is
+        .stream(primaryKey: [
+          'id'
+        ]) // 2) tell it what your PK is (matches DB schema)
         .eq('circle_id', circleId) // 3) apply your filter
         .listen((rows) {
-          print('listening: $rows');
+          print('🎯 Real-time location update received: ${rows.length} rows');
           final Map<String, LatLng> updated = {};
-          final uid = _supabase.auth.currentUser?.id;
 
           for (final row in rows as List) {
             final rowUid = row['user_id'] as String;
-            if (rowUid == uid) continue;
-            updated[rowUid] = LatLng(
-              (row['lat'] as num).toDouble(),
-              (row['lng'] as num).toDouble(),
-            );
+            print('  📍 User: $rowUid, Current: $currentUserId');
+            if (rowUid == currentUserId) {
+              print('  ⏭️ Skipping own location');
+              continue; // Skip current user
+            }
+            final lat = (row['lat'] as num).toDouble();
+            final lng = (row['lng'] as num).toDouble();
+            updated[rowUid] = LatLng(lat, lng);
+            print('  ✅ Added location for $rowUid: $lat, $lng');
           }
-          print('Updated locations: $updated');
+          print('🗺️ Final other user locations map: $updated');
           onLocationsUpdate(updated);
         });
   }

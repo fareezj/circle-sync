@@ -107,15 +107,37 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
     widget.mapState.otherUsersLocations.forEach((userId, loc) {
       final members = widget.members ?? [];
 
+      // Debug logging
+      debugPrint('🔍 Checking userId: $userId at location: $loc');
+      debugPrint(
+          '📋 Available members: ${members.map((m) => m.userId).toList()}');
+
       // find all members matching this userId
       final matches = members.where((u) => u.userId == userId);
       if (matches.isEmpty) {
-        // no member in the list for this userId → skip
-        debugPrint('No member data for userId: $userId');
+        // no member in the list for this userId → show a generic marker
+        debugPrint(
+            '❌ No member data for userId: $userId - showing generic marker');
+        markers.add(
+          Marker(
+            point: loc,
+            width: 40,
+            height: 40,
+            child: GestureDetector(
+              onTap: () => widget.onOtherUserTap(userId, loc),
+              child: const Icon(
+                Icons.person_pin_circle,
+                color: Colors.orange,
+                size: 40,
+              ),
+            ),
+          ),
+        );
         return;
       }
 
       final member = matches.first;
+      debugPrint('✅ Found member data for userId: $userId - ${member.name}');
       markers.add(
         Marker(
           point: loc,
