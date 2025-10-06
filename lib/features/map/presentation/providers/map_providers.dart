@@ -95,6 +95,8 @@ class MapNotifier extends StateNotifier<MapPageState> {
     final username = await ref.watch(getUsernameProvider.future);
     final userId = await ref.watch(getUserIdProvider.future);
 
+    print('JOINED CIRCLES: $circles');
+
     return circles.fold((l) {
       state = state.copyWith(
         isLoading: false,
@@ -147,7 +149,7 @@ class MapNotifier extends StateNotifier<MapPageState> {
       );
 
       // Load places for the selected circle
-      await ref.read(mapNotifierProvider.notifier).getPlaces(pointedCircle.id);
+      //await ref.read(mapNotifierProvider.notifier).getPlaces(pointedCircle.id);
 
       return pointedCircle;
     });
@@ -245,7 +247,7 @@ class MapNotifier extends StateNotifier<MapPageState> {
         state = state.copyWith(placeList: list);
       });
     } catch (e) {
-      throw Exception(e);
+      throw Exception(e.toString());
     }
   }
 
@@ -257,7 +259,7 @@ class MapNotifier extends StateNotifier<MapPageState> {
         print('INSERT SUCCESS!');
       });
     } catch (e) {
-      throw Exception(e);
+      throw Exception(e.toString());
     }
   }
 

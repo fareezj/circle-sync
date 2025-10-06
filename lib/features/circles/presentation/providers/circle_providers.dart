@@ -24,7 +24,7 @@ class CircleNotifier extends StateNotifier<CirclePageState> {
         onSuccess();
       });
     } catch (e) {
-      throw Exception(e);
+      throw Exception(e.toString());
     } finally {
       state = state.copyWith(isLoading: false);
       circleSheetNavKey.currentState!.pop();
@@ -45,7 +45,7 @@ class CircleNotifier extends StateNotifier<CirclePageState> {
         onSuccess();
       });
     } catch (e) {
-      throw Exception(e);
+      throw Exception(e.toString());
     }
   }
 

@@ -61,7 +61,6 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      print('AWOW PERMISSION RESUMED');
       checkPermission();
     }
   }
@@ -70,7 +69,7 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
     await ref.read(mapNotifierProvider.notifier).checkLocationPermisssion();
   }
 
-  Future<void> initCircleDetails({bool getLatestCircle = false}) async {
+  Future<void> initCircleDetails({bool getLatestCircle = true}) async {
     final locationSharingStatus =
         await ref.read(mapNotifierProvider.notifier).getLocationSharingStatus();
     await ref.read(mapNotifierProvider.notifier).checkLocationPermisssion();
@@ -81,6 +80,7 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
         .read(mapNotifierProvider.notifier)
         .loadInitialCircle(getLatestCircle: getLatestCircle)
         .then((circle) async {
+      print('LOADED CIRCLE: $circle');
       await initGeofence(ref: ref, circleId: circle!.id);
       await ref
           .read(mapNotifierProvider.notifier)
@@ -338,11 +338,11 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
                                                     circleId: mapState
                                                         .currentCircleId,
                                                   );
-                                                  await ref
-                                                      .read(mapNotifierProvider
-                                                          .notifier)
-                                                      .getPlaces(mapState
-                                                          .currentCircleId);
+                                                  // await ref
+                                                  //     .read(mapNotifierProvider
+                                                  //         .notifier)
+                                                  //     .getPlaces(mapState
+                                                  //         .currentCircleId);
                                                   ref
                                                       .read(mapNotifierProvider
                                                           .notifier)
@@ -381,7 +381,7 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
     await ref
         .read(mapNotifierProvider.notifier)
         .loadCircleDetails(circle, _mapController);
-    await ref.read(mapNotifierProvider.notifier).getPlaces(circle.id);
+    // await ref.read(mapNotifierProvider.notifier).getPlaces(circle.id);
   }
 
   void _recenterMap() {

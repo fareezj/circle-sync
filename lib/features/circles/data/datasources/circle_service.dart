@@ -18,7 +18,7 @@ class CircleService {
     final rows = await _supabase.from('circles').insert({
       'name': name,
       'created_by': user.id,
-      'date_created': DateTime.now().toIso8601String(),
+      'created_at': DateTime.now().toIso8601String(),
       'join_code': joinCode
     }).select();
 
@@ -84,7 +84,7 @@ class CircleService {
         });
       }
     } catch (e) {
-      throw Exception(e);
+      throw Exception(e.toString());
     }
   }
 
@@ -126,7 +126,7 @@ class CircleService {
         }
       }
     } catch (e) {
-      throw Exception(e);
+      throw Exception(e.toString());
     }
   }
 
@@ -150,7 +150,7 @@ class CircleService {
 
       return members;
     } catch (e) {
-      throw Exception(e);
+      throw Exception(e.toString());
     }
   }
 
@@ -158,19 +158,36 @@ class CircleService {
     try {
       final userId = _supabase.auth.currentUser!.id;
 
-      // 1) Query circle_members and FK-join into circles
-      final response = await _supabase.from('circle_members').select(r'''
-        circles (
-          circle_id,
-          name,
-          created_by,
-          date_created
-        )
-      ''').eq('user_id', userId);
+      print('USER ID: $userId');
 
-      // 2) Unwrap & map into your CircleModel
-      return response.map((row) {
-        final json = row['circles'] as Map<String, dynamic>;
+      // 1) First get the circle IDs the user is a member of
+      final memberResponse = await _supabase
+          .from('circle_members')
+          .select('circle_id')
+          .eq('user_id', userId);
+
+      print('MEMBER RESPONSE: $memberResponse');
+
+      if (memberResponse.isEmpty) {
+        return [];
+      }
+
+      // 2) Get the circle IDs
+      final circleIds =
+          memberResponse.map((row) => row['circle_id'] as String).toList();
+
+      print('CIRCLE IDS: $circleIds');
+
+      // 3) Fetch the actual circle details
+      final circlesResponse = await _supabase
+          .from('circles')
+          .select('circle_id, name, created_by, created_at')
+          .inFilter('circle_id', circleIds);
+
+      print('CIRCLES RESPONSE: $circlesResponse');
+
+      // 4) Map into your CircleModel
+      return circlesResponse.map((json) {
         return CircleModel.fromMap(json);
       }).toList();
     } catch (e) {

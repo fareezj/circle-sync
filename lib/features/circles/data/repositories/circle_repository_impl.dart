@@ -27,7 +27,7 @@ class CircleRepositoryImpl implements CircleRepository {
       final result = await CircleService().getCircleMembers(circleId);
       return Right(result);
     } catch (e) {
-      return Left(ServerError(errorMessage: e));
+      return Left(ServerError(errorMessage: e.toString()));
     }
   }
 
@@ -37,7 +37,7 @@ class CircleRepositoryImpl implements CircleRepository {
       final result = await CircleService().getJoinedCircles();
       return Right(result);
     } catch (e) {
-      return Left(ServerError(errorMessage: e));
+      return Left(ServerError(errorMessage: e.toString()));
     }
   }
 
@@ -47,7 +47,7 @@ class CircleRepositoryImpl implements CircleRepository {
       final result = await CircleService().createCircle(circleName);
       return Right(result);
     } catch (e) {
-      return Left(ServerError(errorMessage: e));
+      return Left(ServerError(errorMessage: e.toString()));
     }
   }
 }

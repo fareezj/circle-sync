@@ -65,11 +65,10 @@ Future<void> startCallback() async {
 
   // Re‐initialize Supabase in this isolate
   await Supabase.initialize(
-    url: 'https://hnbqegfgzwugkdtfysma.supabase.co',
+    url: 'https://ojctqcthzuwrckvixbcd.supabase.co',
     anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhuYnFlZ2Znend1Z2tkdGZ5c21hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUxNTE2NjQsImV4cCI6MjA2MDcyNzY2NH0.l_RqDcUmqvB_MRJ3VG-VQJcjVXqlKeQPghoEy5awTGc',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qY3RxY3RoenV3cmNrdml4YmNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk3Mzk2MDgsImV4cCI6MjA3NTMxNTYwOH0.7eFKpZXGx5uhZwKbZnYVipKHZ5Xo3-0SGW__QVS5yJY',
   );
-
   // Register our handler for task events
   FlutterForegroundTask.setTaskHandler(LocationTaskHandler());
 }

@@ -68,6 +68,7 @@ class RegisterNotifier extends StateNotifier<RegisterPageModel> {
         'user_id': userId,
         'email': state.email,
         'name': state.name,
+        'onesignal_id': '',
       });
 
       final secureStorage = ref.read(secureStorageServiceProvider);
@@ -79,7 +80,7 @@ class RegisterNotifier extends StateNotifier<RegisterPageModel> {
       navigatorKey.currentState?.pop();
     } catch (e) {
       ref.read(errorMessageNotifier.notifier).setError(e.toString());
-      throw Exception(e);
+      throw Exception(e.toString());
     } finally {
       state = state.copyWith(isLoading: false);
     }

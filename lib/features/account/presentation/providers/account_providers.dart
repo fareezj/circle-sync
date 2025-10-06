@@ -13,7 +13,7 @@ class AccountNotifier extends StateNotifier<AccountPageModel> {
       final name = await ref.read(getUsernameProvider.future);
       state = state.copyWith(email: email, name: name, isLoading: false);
     } catch (e) {
-      throw Exception(e);
+      throw Exception(e.toString());
     } finally {
       state = state.copyWith(isLoading: false);
     }

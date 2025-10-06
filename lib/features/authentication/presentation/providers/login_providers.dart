@@ -62,7 +62,7 @@ class LoginNotifer extends StateNotifier<LoginPageModel> {
       navigatorKey.currentState?.pushReplacementNamed(RouteGenerator.mainPage);
     } catch (e) {
       ref.read(errorMessageNotifier.notifier).setError(e.toString());
-      throw Exception(e);
+      throw Exception(e.toString());
     } finally {
       state = state.copyWith(isLoading: false);
     }

@@ -94,9 +94,10 @@ Future<void> geofenceTriggered(GeofenceCallbackParams params) async {
     NativeGeofenceBackgroundManager.instance.promoteToForeground();
 
     // 1. Create a lightweight client—this works in any isolate :contentReference[oaicite:2]{index=2}
-    final supabase = SupabaseClient(
-      'https://hnbqegfgzwugkdtfysma.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhuYnFlZ2Znend1Z2tkdGZ5c21hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUxNTE2NjQsImV4cCI6MjA2MDcyNzY2NH0.l_RqDcUmqvB_MRJ3VG-VQJcjVXqlKeQPghoEy5awTGc',
+    await Supabase.initialize(
+      url: 'https://ojctqcthzuwrckvixbcd.supabase.co',
+      anonKey:
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qY3RxY3RoenV3cmNrdml4YmNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk3Mzk2MDgsImV4cCI6MjA3NTMxNTYwOH0.7eFKpZXGx5uhZwKbZnYVipKHZ5Xo3-0SGW__QVS5yJY',
     );
     // Fetch circle IDs
     final res = await supabase.from('circles').select('circle_id');

@@ -17,7 +17,7 @@ class CircleModel {
       'circle_id': id,
       'name': name,
       'created_by': createdBy,
-      'date_created': dateCreated.toUtc().toIso8601String(),
+      'created_at': dateCreated.toUtc().toIso8601String(),
     };
   }
 
@@ -28,7 +28,7 @@ class CircleModel {
       id: map['circle_id'] as String,
       name: map['name'] as String,
       createdBy: map['created_by'] as String,
-      dateCreated: DateTime.parse(map['date_created'] as String),
+      dateCreated: DateTime.parse(map['created_at'] as String),
     );
   }
 }
