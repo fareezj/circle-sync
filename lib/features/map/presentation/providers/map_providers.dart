@@ -298,7 +298,15 @@ class MapNotifier extends StateNotifier<MapPageState> {
     }
   }
 
-  void toggleSimulation(bool toggleSimulation) {}
+  void toggleSimulation(bool useSimulation) {
+    print('🎮 Toggling simulation: $useSimulation');
+    state = state.copyWith(useSimulation: useSimulation);
+
+    // Restart location subscription with new simulation setting
+    if (state.hasCircle && state.currentCircleId.isNotEmpty) {
+      subscribeToLocationUpdates();
+    }
+  }
 }
 
 final mapNotifierProvider =

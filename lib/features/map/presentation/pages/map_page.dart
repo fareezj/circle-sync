@@ -379,6 +379,33 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
                 if (isLoading) LoadingIndicator()
               ],
             ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          final currentSimulation = mapState.useSimulation;
+          ref
+              .read(mapNotifierProvider.notifier)
+              .toggleSimulation(!currentSimulation);
+
+          // Show a snackbar to explain what just happened
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(currentSimulation
+                  ? '📍 Switched to real GPS location'
+                  : '🚶‍♂️ Switched to simulated movement around KL'),
+              duration: const Duration(seconds: 2),
+              backgroundColor: currentSimulation ? Colors.blue : Colors.orange,
+            ),
+          );
+        },
+        backgroundColor: mapState.useSimulation ? Colors.orange : Colors.blue,
+        tooltip: mapState.useSimulation
+            ? 'Switch to real GPS'
+            : 'Switch to simulation',
+        child: Icon(
+          mapState.useSimulation ? Icons.directions_walk : Icons.gps_fixed,
+          color: Colors.white,
+        ),
+      ),
     );
   }
 

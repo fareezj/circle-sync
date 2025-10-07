@@ -79,29 +79,63 @@ class LocationService {
     onLocationAndRouteUpdate(current, destination, [current]);
   }
 
-  /// Simulated circular movement
+  /// Simulated movement along a path (like walking around KL city center)
   Stream<Position> _simulatePositionStream() async* {
-    double lat = 3.0625016;
-    double lng = 101.6682533;
-    int step = 0;
+    // Kuala Lumpur city center coordinates
+    List<LatLng> waypoints = [
+      LatLng(3.1390, 101.6869), // KLCC
+      LatLng(3.1478, 101.6953), // Pavilion KL
+      LatLng(3.1516, 101.7020), // Bukit Bintang
+      LatLng(3.1570, 101.7120), // Times Square
+      LatLng(3.1480, 101.7000), // Lot 10
+      LatLng(3.1420, 101.6920), // Back towards KLCC
+    ];
+
+    int currentWaypointIndex = 0;
+    LatLng currentPos = waypoints[0];
 
     while (true) {
-      await Future.delayed(const Duration(seconds: 2));
-      step++;
-      double angle = step * 0.1;
-      lat += 0.001 * cos(angle);
-      lng += 0.001 * sin(angle);
+      await Future.delayed(const Duration(seconds: 3));
+
+      // Move towards the next waypoint
+      LatLng target = waypoints[currentWaypointIndex % waypoints.length];
+
+      // Calculate movement step (simulate walking speed)
+      double stepSize = 0.0001; // ~11 meters per step
+      double latDiff = target.latitude - currentPos.latitude;
+      double lngDiff = target.longitude - currentPos.longitude;
+      double distance = sqrt(latDiff * latDiff + lngDiff * lngDiff);
+
+      if (distance < stepSize) {
+        // Reached waypoint, move to next one
+        currentWaypointIndex++;
+        currentPos = target;
+      } else {
+        // Move towards target
+        double ratio = stepSize / distance;
+        currentPos = LatLng(
+          currentPos.latitude + (latDiff * ratio),
+          currentPos.longitude + (lngDiff * ratio),
+        );
+      }
+
+      // Add some natural variation
+      double variation = 0.00002;
+      double randomLat =
+          currentPos.latitude + (Random().nextDouble() - 0.5) * variation;
+      double randomLng =
+          currentPos.longitude + (Random().nextDouble() - 0.5) * variation;
 
       yield Position(
-        latitude: lat,
-        longitude: lng,
+        latitude: randomLat,
+        longitude: randomLng,
         timestamp: DateTime.now(),
-        accuracy: 10.0,
-        altitude: 0.0,
+        accuracy: 5.0 + Random().nextDouble() * 5.0, // 5-10m accuracy
+        altitude: 50.0 + Random().nextDouble() * 20.0,
         heading: 0.0,
-        speed: 1.0,
-        speedAccuracy: 0.0,
-        altitudeAccuracy: 0.0,
+        speed: 1.2 + Random().nextDouble() * 0.8, // 1.2-2.0 m/s (walking speed)
+        speedAccuracy: 0.5,
+        altitudeAccuracy: 3.0,
         headingAccuracy: 0.0,
       );
     }
@@ -136,12 +170,17 @@ class LocationService {
           );
 
     _positionStreamSubscription = posStream.listen((pos) async {
-      print('Position update: ${pos.latitude}, ${pos.longitude}');
+      final locationSource = _useSimulation ? '🎮 SIMULATED' : '📍 REAL GPS';
+      print(
+          '$locationSource Position update: ${pos.latitude}, ${pos.longitude}');
       final updated = LatLng(pos.latitude, pos.longitude);
       onLocationUpdate(updated, [updated]);
 
       if (_isLocationSharing) {
+        print('💾 Saving $locationSource location to database...');
         await upsertLocation(circleId, uid, updated, false);
+      } else {
+        print('⏸️ Location sharing disabled - not saving to database');
       }
     });
   }
@@ -154,9 +193,12 @@ class LocationService {
     bool isPaused,
   ) async {
     try {
-      print('updating location circleId: $circleId, userId: $userId');
-      print('updating location lat: ${loc.latitude}, lng: ${loc.longitude}');
-      await _supabase.from('locations').upsert(
+      print(
+          '💾 Updating location in DB - Circle: $circleId, User: ${userId.substring(0, 8)}...');
+      print(
+          '📍 Location: ${loc.latitude.toStringAsFixed(6)}, ${loc.longitude.toStringAsFixed(6)}');
+
+      final result = await _supabase.from('locations').upsert(
         {
           'circle_id': circleId,
           'user_id': userId,
@@ -166,8 +208,13 @@ class LocationService {
         },
         onConflict: 'circle_id, user_id',
       ).select();
+
+      print(
+          '✅ Location saved to database successfully! Rows affected: ${result.length}');
     } on PostgrestException catch (e) {
-      print('Location upsert error: ${e.message}');
+      print('❌ Location upsert error: ${e.message}');
+    } catch (e) {
+      print('❌ Unexpected error saving location: $e');
     }
   }
 
