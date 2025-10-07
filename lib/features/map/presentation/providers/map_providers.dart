@@ -244,12 +244,21 @@ class MapNotifier extends StateNotifier<MapPageState> {
 
   Future<void> getPlaces(String circleId) async {
     try {
+      print('🏞️ Loading places for circle: $circleId');
       final result = await mapUsecase.getPlaces(circleId);
-      result.fold((_) {}, (list) {
+      result.fold((failure) {
+        print('❌ Failed to load places: $failure');
+        // Don't throw here, just log the failure
+        state = state.copyWith(placeList: []);
+      }, (list) {
+        print(
+            '✅ Loaded ${list.length} places: ${list.map((p) => p.title).toList()}');
         state = state.copyWith(placeList: list);
       });
     } catch (e) {
-      throw Exception(e.toString());
+      print('❌ Exception loading places: $e');
+      state = state.copyWith(placeList: []);
+      // Don't rethrow, just set empty list
     }
   }
 

@@ -23,7 +23,6 @@ import 'package:circle_sync/services/location_service.dart';
 import 'package:circle_sync/screens/widgets/map_info.dart';
 import 'package:circle_sync/features/map/presentation/providers/map_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:super_tooltip/super_tooltip.dart';
 import 'package:uuid/v4.dart';
 
 class MapPage extends ConsumerStatefulWidget {
@@ -85,6 +84,7 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
       await ref
           .read(mapNotifierProvider.notifier)
           .loadCircleDetails(circle, _mapController);
+      await ref.read(mapNotifierProvider.notifier).getPlaces(circle.id);
     });
   }
 
@@ -257,10 +257,16 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
                                         CircleBottomSheet(
                                           members: mapState.circleMembers,
                                           circle: mapState.joinedCircles
-                                              .where((e) =>
-                                                  e.id ==
-                                                  mapState.currentCircleId)
-                                              .first,
+                                                  .where((e) =>
+                                                      e.id ==
+                                                      mapState.currentCircleId)
+                                                  .isNotEmpty
+                                              ? mapState.joinedCircles
+                                                  .where((e) =>
+                                                      e.id ==
+                                                      mapState.currentCircleId)
+                                                  .first
+                                              : null,
                                           hasCircle: mapState.hasCircle,
                                           onCircleTap: (c) {
                                             loadNewCircle(c);
@@ -381,7 +387,7 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
     await ref
         .read(mapNotifierProvider.notifier)
         .loadCircleDetails(circle, _mapController);
-    // await ref.read(mapNotifierProvider.notifier).getPlaces(circle.id);
+    await ref.read(mapNotifierProvider.notifier).getPlaces(circle.id);
   }
 
   void _recenterMap() {

@@ -79,7 +79,9 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
 
     // Place markers
     if (widget.places != null) {
+      print('🗺️ MapWidget received ${widget.places!.length} places');
       for (var place in widget.places!) {
+        print('   📍 Place: ${place.title} at ${place.centerGeography}');
         final latLng = LatLngExtractor.extractLatLng(place.centerGeography);
         markers.add(
           Marker(
@@ -225,20 +227,43 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
         // Draw routes and tracking history
         if (polylines.isNotEmpty) PolylineLayer(polylines: polylines),
 
-        // 1 km circle under the selected place pin
-        // if (widget.selectedPlace != null)
-        //   CircleLayer(
-        //     circles: [
-        //       CircleMarker(
-        //         point: widget.selectedPlace!,
-        //         radius: 1000, // in meters
-        //         useRadiusInMeter: true,
-        //         color: Colors.blue.withOpacity(0.2),
-        //         borderColor: Colors.blue,
-        //         borderStrokeWidth: 2,
-        //       ),
-        //     ],
-        //   ),
+        // Geofence circles for all places
+        if (widget.places != null && widget.places!.isNotEmpty) ...[
+          Builder(builder: (context) {
+            print(
+                '🔵 Creating CircleLayer with ${widget.places!.length} circles');
+            return const SizedBox.shrink();
+          }),
+          CircleLayer(
+            circles: widget.places!.map((place) {
+              final latLng =
+                  LatLngExtractor.extractLatLng(place.centerGeography);
+              return CircleMarker(
+                point: LatLng(latLng.latitude, latLng.longitude),
+                radius: place.radiusM, // Use actual radius from DB
+                useRadiusInMeter: true,
+                color: Colors.blue.withOpacity(0.1),
+                borderColor: Colors.blue,
+                borderStrokeWidth: 2,
+              );
+            }).toList(),
+          ),
+        ],
+
+        // Selected place highlight circle
+        if (widget.selectedPlace != null)
+          CircleLayer(
+            circles: [
+              CircleMarker(
+                point: widget.selectedPlace!,
+                radius: 1000, // highlight radius
+                useRadiusInMeter: true,
+                color: Colors.orange.withOpacity(0.2),
+                borderColor: Colors.orange,
+                borderStrokeWidth: 3,
+              ),
+            ],
+          ),
 
         // All markers (current user, others, and place pins)
         MarkerLayer(markers: markers),

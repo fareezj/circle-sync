@@ -21,12 +21,26 @@ class CircleBottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    print('members: ${members[0].userId}');
+    print('members count: ${members.length}');
     print('circle created by: ${circle?.createdBy}');
-    final ownerName =
-        members.firstWhere((member) => member.userId == circle!.createdBy).name;
 
-    if (!hasCircle) {
+    // Safe access to owner name
+    String ownerName = 'Unknown';
+    if (members.isNotEmpty && circle?.createdBy != null) {
+      try {
+        final owner = members.firstWhere(
+          (member) => member.userId == circle!.createdBy,
+          orElse: () =>
+              CircleMembersModel(userId: '', name: 'Unknown', role: ''),
+        );
+        ownerName = owner.name;
+      } catch (e) {
+        print('Error finding owner: $e');
+        ownerName = 'Unknown';
+      }
+    }
+
+    if (!hasCircle || circle == null) {
       return Card(
         color: Colors.white.withOpacity(0.9),
         child: Padding(
@@ -56,7 +70,7 @@ class CircleBottomSheet extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             TextWidgets.mainBold(title: circle!.name, fontSize: 20.0),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             TextWidgets.mainSemiBold(title: 'Created by: $ownerName'),
             TextWidgets.mainSemiBold(
                 title: 'Created at: ${circle!.dateCreated.toString()}',

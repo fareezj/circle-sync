@@ -15,7 +15,7 @@ class MapRepositoryImpl implements MapRepository {
       final result = await MapServices().getPlaces(circleId);
       return Right(result);
     } catch (e) {
-      return Left(ServerError(errorMessage: e));
+      return Left(ServerError(errorMessage: e.toString()));
     }
   }
 
@@ -25,7 +25,7 @@ class MapRepositoryImpl implements MapRepository {
       final result = await MapServices().insertPlace(place);
       return Right(result);
     } catch (e) {
-      return Left(ServerError(errorMessage: e));
+      return Left(ServerError(errorMessage: e.toString()));
     }
   }
 }
