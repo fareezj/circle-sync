@@ -32,7 +32,6 @@ class PlacesModel {
   final String centerGeography;
   final double radiusM;
   final String title;
-  final String message;
 
   PlacesModel({
     required this.geofenceId,
@@ -40,7 +39,6 @@ class PlacesModel {
     required this.centerGeography,
     required this.radiusM,
     required this.title,
-    required this.message,
   });
 
   // Factory method to create Geofence from JSON
@@ -51,7 +49,6 @@ class PlacesModel {
       centerGeography: json['center_geography'] as String,
       radiusM: (json['radius_m'] as num).toDouble(),
       title: json['title'] as String,
-      message: json['message'] as String,
     );
   }
 
@@ -63,7 +60,6 @@ class PlacesModel {
       'center_geography': centerGeography,
       'radius_m': radiusM,
       'title': title,
-      'message': message,
     };
   }
 }

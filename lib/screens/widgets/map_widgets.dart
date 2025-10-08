@@ -81,8 +81,10 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
     if (widget.places != null) {
       print('🗺️ MapWidget received ${widget.places!.length} places');
       for (var place in widget.places!) {
-        print('   📍 Place: ${place.title} at ${place.centerGeography}');
+        print(
+            '   📍 Place: ${place.title} at ${place.centerGeography} (${place.radiusM}m radius)');
         final latLng = LatLngExtractor.extractLatLng(place.centerGeography);
+        print('     → Marker at: ${latLng.latitude}, ${latLng.longitude}');
         markers.add(
           Marker(
             width: 200, // <-- match the child’s max width
@@ -232,6 +234,12 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
           Builder(builder: (context) {
             print(
                 '🔵 Creating CircleLayer with ${widget.places!.length} circles');
+            for (var place in widget.places!) {
+              final latLng =
+                  LatLngExtractor.extractLatLng(place.centerGeography);
+              print(
+                  '   🟦 Circle: ${place.title} at ${latLng.latitude}, ${latLng.longitude} with ${place.radiusM}m radius');
+            }
             return const SizedBox.shrink();
           }),
           CircleLayer(
@@ -242,13 +250,28 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
                 point: LatLng(latLng.latitude, latLng.longitude),
                 radius: place.radiusM, // Use actual radius from DB
                 useRadiusInMeter: true,
-                color: Colors.blue.withOpacity(0.1),
-                borderColor: Colors.blue,
-                borderStrokeWidth: 2,
+                color: Colors.purple
+                    .withOpacity(0.3), // Purple for better visibility
+                borderColor: Colors.purple,
+                borderStrokeWidth: 4, // Thick border for visibility
               );
             }).toList(),
           ),
         ],
+
+        // TEST: Always show a test geofence circle to verify rendering works
+        CircleLayer(
+          circles: [
+            CircleMarker(
+              point: LatLng(3.1390, 101.6869), // KLCC coordinates
+              radius: 500, // 500m radius
+              useRadiusInMeter: true,
+              color: Colors.red.withOpacity(0.3), // Red for test visibility
+              borderColor: Colors.red,
+              borderStrokeWidth: 5,
+            ),
+          ],
+        ),
 
         // Selected place highlight circle
         if (widget.selectedPlace != null)

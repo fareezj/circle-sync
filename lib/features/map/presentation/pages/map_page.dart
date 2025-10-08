@@ -100,32 +100,44 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
           : Stack(
               alignment: Alignment.topCenter,
               children: [
-                MapWidget(
-                  mapController: _mapController,
-                  members: mapState.circleMembers,
-                  userModel: CircleMembersModel(
-                    userId: mapState.currentUser?.userId ?? '',
-                    name: mapState.currentUser?.name ?? '',
-                    role: mapState.currentUser?.role ?? '',
-                  ),
-                  mapState: MapState(
-                    currentLocation: mapState.currentLocation,
-                    osrmRoutePoints: mapState.osrmRoutePoints,
-                    trackingPoints: mapState.trackingPoints,
-                    otherUsersLocations: mapState.otherUsersLocations,
-                  ),
-                  hasCircle: mapState.hasCircle,
-                  selectedPlace: mapState.selectedPlace,
-                  onCurrentLocationTap: () {
-                    showCurrentUserInfoDialog(
-                        context, mapState.currentLocation!);
-                  },
-                  onOtherUserTap: (userId, loc) {
-                    showUserInfoDialog(context, userId, loc);
-                  },
-                  places: mapState.placeList,
-                  //showPlaceTooltip: true,
-                ),
+                Builder(builder: (context) {
+                  print(
+                      '🏗️ Building MapWidget with ${mapState.placeList.length} places in placeList');
+                  print(
+                      '   Circle: ${mapState.currentCircleId}, hasCircle: ${mapState.hasCircle}');
+                  if (mapState.placeList.isNotEmpty) {
+                    for (var place in mapState.placeList) {
+                      print(
+                          '   🏷️ Place in state: ${place.title} at ${place.centerGeography}');
+                    }
+                  }
+                  return MapWidget(
+                    mapController: _mapController,
+                    members: mapState.circleMembers,
+                    userModel: CircleMembersModel(
+                      userId: mapState.currentUser?.userId ?? '',
+                      name: mapState.currentUser?.name ?? '',
+                      role: mapState.currentUser?.role ?? '',
+                    ),
+                    mapState: MapState(
+                      currentLocation: mapState.currentLocation,
+                      osrmRoutePoints: mapState.osrmRoutePoints,
+                      trackingPoints: mapState.trackingPoints,
+                      otherUsersLocations: mapState.otherUsersLocations,
+                    ),
+                    hasCircle: mapState.hasCircle,
+                    selectedPlace: mapState.selectedPlace,
+                    onCurrentLocationTap: () {
+                      showCurrentUserInfoDialog(
+                          context, mapState.currentLocation!);
+                    },
+                    onOtherUserTap: (userId, loc) {
+                      showUserInfoDialog(context, userId, loc);
+                    },
+                    places: mapState.placeList,
+                    //showPlaceTooltip: true,
+                  );
+                }),
                 if (!mapState.isLocationAlwaysAllowed)
                   Positioned(
                     top: 70.0,
@@ -335,8 +347,6 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
                                                               'POINT(${location.latitude.toStringAsFixed(4)} ${location.longitude.toStringAsFixed(4)})',
                                                           radiusM: 500,
                                                           title: title,
-                                                          message:
-                                                              'You are now at $title vicinity',
                                                         ),
                                                       );
                                                   await initGeofence(
