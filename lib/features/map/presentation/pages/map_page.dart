@@ -1,7 +1,7 @@
 import 'package:circle_sync/features/circles/data/models/circle_model.dart';
 import 'package:circle_sync/features/map/data/models/map_models.dart';
 import 'package:circle_sync/features/map/presentation/pages/widgets/error_tooltip.dart';
-import 'package:circle_sync/features/map/presentation/pages/widgets/location_sharing_switch.dart';
+
 import 'package:circle_sync/features/map/presentation/widgets/add_place_bottom_sheet.dart';
 import 'package:circle_sync/features/map/presentation/widgets/places_bottom_sheet.dart';
 import 'package:circle_sync/features/map/presentation/widgets/tab_chip.dart';
@@ -19,11 +19,13 @@ import 'package:circle_sync/models/map_state_model.dart';
 import 'package:circle_sync/screens/widgets/circle_info_card.dart';
 import 'package:circle_sync/screens/widgets/map_widgets.dart';
 import 'package:circle_sync/screens/widgets/members_bottom_sheet.dart';
-import 'package:circle_sync/services/location_service.dart';
+
 import 'package:circle_sync/screens/widgets/map_info.dart';
 import 'package:circle_sync/features/map/presentation/providers/map_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/v4.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:latlong2/latlong.dart';
 
 class MapPage extends ConsumerStatefulWidget {
   final String? circleId;
@@ -35,7 +37,7 @@ class MapPage extends ConsumerStatefulWidget {
 
 class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
   final MapController _mapController = MapController();
-  final LocationService _locationService = LocationService();
+
   final DraggableScrollableController _scrollableController =
       DraggableScrollableController();
   final PageController _pageController = PageController();
@@ -93,6 +95,8 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
     final mapState = ref.watch(mapNotifierProvider);
     final selectedChipItem = ref.watch(mapNotifierProvider).selectedChipItem;
     final isLoading = ref.watch(baseLoadingNotifier);
+
+    print('MAP STATE: ${mapState.currentLocation}');
 
     return Scaffold(
       body: mapState.currentLocation == null
@@ -181,20 +185,32 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  LocationSharingSwitch(
-                                    isSelected: mapState.isSharingLocation,
-                                    onClick: () {
-                                      mapState.isSharingLocation
-                                          ? ref
-                                              .read(
-                                                  mapNotifierProvider.notifier)
-                                              .stopForegroundTask()
-                                          : ref
-                                              .read(
-                                                  mapNotifierProvider.notifier)
-                                              .startForegroundTask();
+                                  ElevatedButton.icon(
+                                    onPressed: () async {
+                                      // Manual check-in - much safer for App Store
+                                      await _checkInAtCurrentLocation();
                                     },
+                                    icon: const Icon(Icons.location_on),
+                                    label: const Text('Check In Here'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.blue,
+                                      foregroundColor: Colors.white,
+                                    ),
                                   ),
+                                  // LocationSharingSwitch(
+                                  //   isSelected: mapState.isSharingLocation,
+                                  //   onClick: () {
+                                  //     mapState.isSharingLocation
+                                  //         ? ref
+                                  //             .read(
+                                  //                 mapNotifierProvider.notifier)
+                                  //             .stopForegroundTask()
+                                  //         : ref
+                                  //             .read(
+                                  //                 mapNotifierProvider.notifier)
+                                  //             .startForegroundTask();
+                                  //   },
+                                  // ),
                                   GestureDetector(
                                     onTap: () => _recenterMap(),
                                     child: Container(
@@ -432,7 +448,36 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
     if (loc != null) _mapController.move(loc, 13.0);
   }
 
-  void _toggleLiveLocation() async {
-    await ref.read(mapNotifierProvider.notifier).startForegroundTask();
+  Future<void> _checkInAtCurrentLocation() async {
+    try {
+      // Simple one-time location request - much safer for App Store
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      final location = LatLng(position.latitude, position.longitude);
+      final mapState = ref.read(mapNotifierProvider);
+
+      if (mapState.hasCircle && mapState.currentCircleId.isNotEmpty) {
+        // Save check-in to database (not continuous tracking)
+        await ref.read(mapNotifierProvider.notifier).checkInAtLocation(
+              location,
+            );
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Checked in successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Check-in failed: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }

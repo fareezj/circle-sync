@@ -8,7 +8,7 @@ import 'package:circle_sync/providers/app_configs/app_configs_provider.dart';
 import 'package:circle_sync/services/location_fg.dart';
 import 'package:circle_sync/services/location_service.dart';
 import 'package:circle_sync/services/permissions.dart';
-import 'package:circle_sync/services/route_service.dart';
+
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
@@ -19,7 +19,7 @@ class MapNotifier extends StateNotifier<MapPageState> {
   final Ref ref;
   final MapUsecase mapUsecase;
   final LocationService _locationService = LocationService();
-  final RouteService _routeService = RouteService();
+
   final CircleUsecase circleUsecase;
   MapNotifier(this.mapUsecase, this.circleUsecase, this.ref)
       : super(MapPageState(isLoading: false, placeList: []));
@@ -183,23 +183,23 @@ class MapNotifier extends StateNotifier<MapPageState> {
     try {
       // PAUSE LIVE LOCATION
       // await _locationService.startForegroundTask();
-      // await _locationService.initInitialLocationAndRoute(
-      //   onLocationAndRouteUpdate: (current, destination, trackingPoints) async {
-      //     state = state.copyWith(
-      //       currentLocation: current,
-      //       destinationLocation: destination,
-      //       trackingPoints: trackingPoints,
-      //     );
-      //     final routePoints = await _routeService.getRoute(
-      //       current.latitude,
-      //       current.longitude,
-      //       destination.latitude,
-      //       destination.longitude,
-      //     );
-      //     state = state.copyWith(osrmRoutePoints: routePoints);
-      //     mapController.move(current, 13.0);
-      //   },
-      // );
+      await _locationService.initInitialLocationAndRoute(
+        onLocationAndRouteUpdate: (current, destination, trackingPoints) async {
+          state = state.copyWith(
+            currentLocation: current,
+            destinationLocation: destination,
+            trackingPoints: trackingPoints,
+          );
+          // final routePoints = await _routeService.getRoute(
+          //   current.latitude,
+          //   current.longitude,
+          //   destination.latitude,
+          //   destination.longitude,
+          // );
+          //state = state.copyWith(osrmRoutePoints: routePoints);
+          mapController.move(current, 13.0);
+        },
+      );
       // Subscribe to location updates
       subscribeToLocationUpdates();
       subscribeToOtherUsersLocations();
@@ -305,6 +305,37 @@ class MapNotifier extends StateNotifier<MapPageState> {
     // Restart location subscription with new simulation setting
     if (state.hasCircle && state.currentCircleId.isNotEmpty) {
       subscribeToLocationUpdates();
+    }
+  }
+
+  /// Manual check-in at current location
+  Future<void> checkInAtLocation(LatLng location) async {
+    if (state.currentCircleId.isEmpty) {
+      print('❌ No circle selected for check-in');
+      return;
+    }
+
+    try {
+      print(
+          '📍 Manual check-in at: ${location.latitude}, ${location.longitude}');
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId == null) {
+        print('❌ No user authenticated');
+        return;
+      }
+
+      await _locationService.upsertLocation(
+        state.currentCircleId,
+        userId,
+        location,
+        false, // Not paused, this is an active check-in
+      );
+
+      // Update current location in state
+      state = state.copyWith(currentLocation: location);
+      print('✅ Manual check-in successful!');
+    } catch (e) {
+      print('❌ Error during manual check-in: $e');
     }
   }
 }

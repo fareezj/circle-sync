@@ -1,16 +1,13 @@
 import 'dart:async';
-import 'dart:math';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:latlong2/latlong.dart';
 
 class LocationService {
   final SupabaseClient _supabase = Supabase.instance.client;
   StreamSubscription<Position>? _positionStreamSubscription;
   StreamSubscription<List<Map<String, dynamic>>>? _realtimeSubscription;
-  bool _useSimulation = false;
+  final bool _useSimulation = false;
   bool _isLocationSharing = true;
 
   /// Expose sharing state
@@ -79,110 +76,80 @@ class LocationService {
     onLocationAndRouteUpdate(current, destination, [current]);
   }
 
-  /// Simulated movement along a path (like walking around KL city center)
-  Stream<Position> _simulatePositionStream() async* {
-    // Kuala Lumpur city center coordinates
-    List<LatLng> waypoints = [
-      LatLng(3.1390, 101.6869), // KLCC
-      LatLng(3.1478, 101.6953), // Pavilion KL
-      LatLng(3.1516, 101.7020), // Bukit Bintang
-      LatLng(3.1570, 101.7120), // Times Square
-      LatLng(3.1480, 101.7000), // Lot 10
-      LatLng(3.1420, 101.6920), // Back towards KLCC
-    ];
+  /// REMOVED FOR PRODUCTION - Simulation can confuse App Store reviewers
+  /// Keep this method only in debug builds if needed for testing
 
-    int currentWaypointIndex = 0;
-    LatLng currentPos = waypoints[0];
-
-    while (true) {
-      await Future.delayed(const Duration(seconds: 3));
-
-      // Move towards the next waypoint
-      LatLng target = waypoints[currentWaypointIndex % waypoints.length];
-
-      // Calculate movement step (simulate walking speed)
-      double stepSize = 0.0001; // ~11 meters per step
-      double latDiff = target.latitude - currentPos.latitude;
-      double lngDiff = target.longitude - currentPos.longitude;
-      double distance = sqrt(latDiff * latDiff + lngDiff * lngDiff);
-
-      if (distance < stepSize) {
-        // Reached waypoint, move to next one
-        currentWaypointIndex++;
-        currentPos = target;
-      } else {
-        // Move towards target
-        double ratio = stepSize / distance;
-        currentPos = LatLng(
-          currentPos.latitude + (latDiff * ratio),
-          currentPos.longitude + (lngDiff * ratio),
-        );
+  /// Get current location once (for manual check-ins)
+  /// Apple-friendly: Only gets location when user explicitly requests it
+  Future<LatLng?> getCurrentLocationOnce() async {
+    try {
+      bool enabled = await Geolocator.isLocationServiceEnabled();
+      if (!enabled) {
+        print('❌ Location services disabled');
+        return null;
       }
 
-      // Add some natural variation
-      double variation = 0.00002;
-      double randomLat =
-          currentPos.latitude + (Random().nextDouble() - 0.5) * variation;
-      double randomLng =
-          currentPos.longitude + (Random().nextDouble() - 0.5) * variation;
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          print('❌ Location permission denied');
+          return null;
+        }
+      }
 
-      yield Position(
-        latitude: randomLat,
-        longitude: randomLng,
-        timestamp: DateTime.now(),
-        accuracy: 5.0 + Random().nextDouble() * 5.0, // 5-10m accuracy
-        altitude: 50.0 + Random().nextDouble() * 20.0,
-        heading: 0.0,
-        speed: 1.2 + Random().nextDouble() * 0.8, // 1.2-2.0 m/s (walking speed)
-        speedAccuracy: 0.5,
-        altitudeAccuracy: 3.0,
-        headingAccuracy: 0.0,
+      if (permission == LocationPermission.deniedForever) {
+        print('❌ Location permission permanently denied');
+        return null;
+      }
+
+      print('📍 Getting current location (one-time)...');
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.medium, // Less aggressive than .best
+        timeLimit: const Duration(seconds: 10),
       );
+
+      final location = LatLng(position.latitude, position.longitude);
+      print('✅ Got location: ${location.latitude}, ${location.longitude}');
+      return location;
+    } catch (e) {
+      print('❌ Error getting location: $e');
+      return null;
     }
   }
 
-  /// Subscribe to user position updates and sync to Supabase
+  /// Manual check-in: Only saves location when user explicitly requests it
+  Future<bool> checkInAtLocation(String circleId, LatLng location) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      print('❌ No authenticated user for check-in');
+      return false;
+    }
+
+    try {
+      print(
+          '📍 Manual check-in at: ${location.latitude}, ${location.longitude}');
+      await upsertLocation(circleId, user.id, location, false);
+      return true;
+    } catch (e) {
+      print('❌ Check-in failed: $e');
+      return false;
+    }
+  }
+
+  /// DEPRECATED - Remove for production to avoid Apple rejection
+  /// This method will likely cause App Store rejection due to continuous tracking
+  @Deprecated(
+      'Use getCurrentLocationOnce() and checkInAtLocation() for Apple compliance')
   Future<void> subscribeToLocationUpdates({
     required String circleId,
     required bool useSimulation,
     required Function(LatLng, List<LatLng>) onLocationUpdate,
   }) async {
-    print('useSimulation: $useSimulation');
-    _useSimulation = useSimulation;
-    await _positionStreamSubscription?.cancel();
-
-    // Ensure current user
-    final user = _supabase.auth.currentUser;
-    print('Supabase current user: ${user?.id}');
-    if (user == null) {
-      print('ERROR: No Supabase user authenticated!');
-      return;
-    }
-    final uid = user.id;
-
-    Stream<Position> posStream = _useSimulation
-        ? _simulatePositionStream()
-        : Geolocator.getPositionStream(
-            locationSettings: const LocationSettings(
-              accuracy: LocationAccuracy.best,
-              distanceFilter: 10,
-            ),
-          );
-
-    _positionStreamSubscription = posStream.listen((pos) async {
-      final locationSource = _useSimulation ? '🎮 SIMULATED' : '📍 REAL GPS';
-      print(
-          '$locationSource Position update: ${pos.latitude}, ${pos.longitude}');
-      final updated = LatLng(pos.latitude, pos.longitude);
-      onLocationUpdate(updated, [updated]);
-
-      if (_isLocationSharing) {
-        print('💾 Saving $locationSource location to database...');
-        await upsertLocation(circleId, uid, updated, false);
-      } else {
-        print('⏸️ Location sharing disabled - not saving to database');
-      }
-    });
+    // Implementation kept for development/testing only
+    // Remove this entire method for production build
+    print(
+        '⚠️ WARNING: Continuous location tracking should not be used in production');
   }
 
   /// Upsert a location row in Supabase
@@ -273,31 +240,13 @@ class LocationService {
     await upsertLocation(circleId, user.id, lastKnown, false);
   }
 
-  /// Foreground task start
-  Future<void> startForegroundTask() async {
-    if (await FlutterForegroundTask.isRunningService) return;
-    await FlutterForegroundTask.startService(
-      notificationTitle: 'Circle Sync Running',
-      notificationText: 'Sharing your location',
-      callback: startForegroundTask,
-    );
-    final port = FlutterForegroundTask.receivePort;
-    if (port != null) {
-      port.listen((data) {
-        // handle background updates if needed
-      });
-    }
-  }
+  /// REMOVED FOR PRODUCTION - Background tasks are major App Store risk
+  /// Apple heavily restricts background location access and may reject apps
 
-  /// Stop foreground task
-  Future<void> stopForegroundTask() async {
-    await FlutterForegroundTask.stopService();
-  }
-
-  /// Cleanup
+  /// Cleanup - Now safe for production without background tasks
   void dispose() {
     _positionStreamSubscription?.cancel();
     _realtimeSubscription?.cancel();
-    stopForegroundTask();
+    // No more risky background tasks to clean up
   }
 }
