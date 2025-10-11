@@ -119,8 +119,8 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
       markers.add(
         Marker(
           point: LatLng(post.lat, post.lng),
-          width: 200, // <-- match the child’s max width
-          height: 200, // <-- match the child’s max height
+          width: 50, // <-- match the child’s max width
+          height: 50, // <-- match the child’s max height
           child: GestureDetector(
             onTap: () {
               ref.read(mapNotifierProvider.notifier).updateSelectedPost(post);

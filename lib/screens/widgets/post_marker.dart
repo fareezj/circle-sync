@@ -15,43 +15,84 @@ class PostMarker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (isSelected)
-          Transform.translate(
-            offset: const Offset(0, -10), // Move label upward
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 4,
-                    offset: Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  TextWidgets.mainBold(title: post.name, fontSize: 12),
-                  if (post.image != null) Image.network(post.image!)
-                ],
+    return SizedBox(
+      width: 10, // Fixed size regardless of marker dimensions
+      height: 10, // Fixed size regardless of marker dimensions
+      child: Stack(
+        clipBehavior: Clip.none, // Allow popup to extend beyond bounds
+        children: [
+          // Main marker (always visible)
+          Positioned.fill(
+            child: CircleAvatar(
+              radius: 20, // Fixed radius for consistent size
+              backgroundColor: AppColors.blueBorder,
+              child: TextWidgets.mainBold(
+                color: AppColors.white,
+                title: post.name.isNotEmpty
+                    ? post.name.substring(0, 1).toUpperCase()
+                    : 'P',
+                fontSize: 14,
               ),
             ),
           ),
-        CircleAvatar(
-          backgroundColor: AppColors.blueBorder,
-          child: TextWidgets.mainBold(
-            color: AppColors.white,
-            title: post.name.length > 2
-                ? post.name.substring(0, 1).toUpperCase()
-                : 'You',
-          ),
-        )
-      ],
+          // Selected popup (conditional) - positioned above marker
+          if (isSelected)
+            Positioned(
+              bottom: 55, // Position above the marker
+              left: -50,
+              right: -50,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(6),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 3,
+                      offset: Offset(0, 1),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Truncated text with fixed width
+                    SizedBox(
+                      width: 108,
+                      child: Text(
+                        post.name.length > 25
+                            ? '${post.name.substring(0, 25)}...'
+                            : post.name,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    // Fixed size image preview
+                    if (post.image != null)
+                      Container(
+                        width: 100,
+                        height: 100,
+                        margin: const EdgeInsets.only(top: 3),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(4),
+                          image: DecorationImage(
+                            image: NetworkImage(post.image!),
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
