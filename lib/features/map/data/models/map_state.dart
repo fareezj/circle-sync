@@ -1,6 +1,7 @@
 import 'package:circle_sync/features/circles/data/models/circle_model.dart';
 import 'package:circle_sync/features/map/data/models/map_models.dart';
 import 'package:circle_sync/models/circle_model.dart';
+import 'package:circle_sync/models/post_model.dart';
 import 'package:latlong2/latlong.dart';
 
 class MapPageState {
@@ -14,6 +15,7 @@ class MapPageState {
   final List<CircleMembersModel> circleMembers;
   final CircleMembersModel? selectedMember;
   final CircleMembersModel? currentUser;
+  final PostModel? selectedPost;
   final bool isSharingLocation;
   final LatLng? selectedPlace;
   final LatLng? currentLocation;
@@ -21,6 +23,7 @@ class MapPageState {
   final List<LatLng> osrmRoutePoints;
   final List<LatLng> trackingPoints;
   final Map<String, LatLng> otherUsersLocations;
+  final Map<String, PostModel> posts;
   final int selectedChipItem;
   final bool isLocationAlwaysAllowed;
 
@@ -28,6 +31,7 @@ class MapPageState {
     required this.isLoading,
     required this.placeList,
     this.selectedMember,
+    this.selectedPost,
     this.currentUser,
     this.useSimulation = false,
     this.currentCircleId = '',
@@ -42,6 +46,7 @@ class MapPageState {
     this.osrmRoutePoints = const [],
     this.trackingPoints = const [],
     this.otherUsersLocations = const {},
+    this.posts = const {},
     this.selectedChipItem = 0,
     this.isLocationAlwaysAllowed = false,
   });
@@ -54,6 +59,7 @@ class MapPageState {
       hasCircle: false,
       joinedCircles: [],
       selectedMember: null,
+      selectedPost: null,
       currentUser: null,
       circleName: null,
       circleMembers: [],
@@ -64,6 +70,7 @@ class MapPageState {
       osrmRoutePoints: [],
       trackingPoints: [],
       otherUsersLocations: {},
+      posts: {},
       selectedChipItem: 0,
       isLocationAlwaysAllowed: false,
     );
@@ -78,6 +85,7 @@ class MapPageState {
     String? circleName,
     List<CircleMembersModel>? circleMembers,
     CircleMembersModel? selectedMember,
+    PostModel? selectedPost,
     CircleMembersModel? currentUser,
     bool? isSharingLocation,
     LatLng? selectedPlace,
@@ -86,6 +94,7 @@ class MapPageState {
     List<LatLng>? osrmRoutePoints,
     List<LatLng>? trackingPoints,
     Map<String, LatLng>? otherUsersLocations,
+    Map<String, PostModel>? posts,
     int? selectedChipItem,
     bool? isLocationAlwaysAllowed,
   }) {
@@ -102,11 +111,13 @@ class MapPageState {
       circleMembers: circleMembers ?? this.circleMembers,
       isSharingLocation: isSharingLocation ?? this.isSharingLocation,
       selectedPlace: selectedPlace ?? this.selectedPlace,
+      selectedPost: selectedPost ?? this.selectedPost,
       currentLocation: currentLocation ?? this.currentLocation,
       destinationLocation: destinationLocation ?? this.destinationLocation,
       osrmRoutePoints: osrmRoutePoints ?? this.osrmRoutePoints,
       trackingPoints: trackingPoints ?? this.trackingPoints,
       otherUsersLocations: otherUsersLocations ?? this.otherUsersLocations,
+      posts: posts ?? this.posts,
       selectedChipItem: selectedChipItem ?? this.selectedChipItem,
       isLocationAlwaysAllowed:
           isLocationAlwaysAllowed ?? this.isLocationAlwaysAllowed,

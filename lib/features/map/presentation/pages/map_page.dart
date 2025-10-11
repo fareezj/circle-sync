@@ -96,7 +96,7 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
     final selectedChipItem = ref.watch(mapNotifierProvider).selectedChipItem;
     final isLoading = ref.watch(baseLoadingNotifier);
 
-    print('MAP STATE: ${mapState.currentLocation}');
+    print('MAP STATE: ${mapState.joinedCircles}');
 
     return Scaffold(
       body: mapState.currentLocation == null
@@ -139,6 +139,11 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
                       showUserInfoDialog(context, userId, loc);
                     },
                     places: mapState.placeList,
+                    posts: mapState.posts,
+                    onOtherUserTapPost: (postId, post) {
+                      showUserInfoDialog(
+                          context, postId, LatLng(post.lat, post.lng));
+                    },
                     //showPlaceTooltip: true,
                   );
                 }),
@@ -148,25 +153,26 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
                     right: 20.0,
                     child: ErrorTooltip(),
                   ),
-                SafeArea(
-                  child: CircleInfoCard(
-                    circleList: mapState.joinedCircles,
-                    hasCircle: mapState.hasCircle,
-                    circleName: mapState.circleName,
-                    onCircleTap: (c) {
-                      loadNewCircle(c);
-                      _recenterMap();
-                    },
-                    onCircleCreated: () {
-                      initCircleDetails(getLatestCircle: true);
-                      _recenterMap();
-                    },
-                    onJoinedCircle: () {
-                      initCircleDetails(getLatestCircle: true);
-                      _recenterMap();
-                    },
+                if (!mapState.hasCircle)
+                  SafeArea(
+                    child: CircleInfoCard(
+                      circleList: mapState.joinedCircles,
+                      hasCircle: mapState.hasCircle,
+                      circleName: mapState.circleName,
+                      onCircleTap: (c) {
+                        loadNewCircle(c);
+                        _recenterMap();
+                      },
+                      onCircleCreated: () {
+                        initCircleDetails(getLatestCircle: true);
+                        _recenterMap();
+                      },
+                      onJoinedCircle: () {
+                        initCircleDetails(getLatestCircle: true);
+                        _recenterMap();
+                      },
+                    ),
                   ),
-                ),
                 // draggable & scrollable sheet
                 if (mapState.hasCircle)
                   DraggableScrollableSheet(

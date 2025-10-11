@@ -4,6 +4,7 @@ import 'package:circle_sync/features/map/data/models/map_models.dart';
 import 'package:circle_sync/features/map/data/models/map_state.dart';
 import 'package:circle_sync/features/map/domain/usecases/map_usecase.dart';
 import 'package:circle_sync/models/circle_model.dart';
+import 'package:circle_sync/models/post_model.dart';
 import 'package:circle_sync/providers/app_configs/app_configs_provider.dart';
 import 'package:circle_sync/services/location_fg.dart';
 import 'package:circle_sync/services/location_service.dart';
@@ -46,6 +47,10 @@ class MapNotifier extends StateNotifier<MapPageState> {
 
   void updateSelectedMember(CircleMembersModel member) {
     state = state.copyWith(selectedMember: member);
+  }
+
+  void updateSelectedPost(PostModel post) {
+    state = state.copyWith(selectedPost: post);
   }
 
   void updateSelectedChipItem(int index) {
@@ -105,16 +110,6 @@ class MapNotifier extends StateNotifier<MapPageState> {
       );
       return null;
     }, (circles) async {
-      if (circles.isEmpty) {
-        state = state.copyWith(
-          isLoading: false,
-          hasCircle: false,
-          joinedCircles: [],
-          currentCircleId: '',
-          circleName: null,
-        );
-        return null;
-      }
       // Load saved current circle
       final savedCircleId = await ref.read(getCurrentCircleId.future);
 
@@ -200,9 +195,12 @@ class MapNotifier extends StateNotifier<MapPageState> {
           mapController.move(current, 13.0);
         },
       );
-      // Subscribe to location updates
-      subscribeToLocationUpdates();
+      // Subscribe to other users' locations (safe for App Store)
       subscribeToOtherUsersLocations();
+      subscribeToUserPosts();
+
+      // Note: User location updates now happen via manual check-in only
+      // This is safer for Apple App Store approval
 
       // Recenter the map to the new circle's location
       final currentLocation = state.currentLocation;
@@ -214,21 +212,9 @@ class MapNotifier extends StateNotifier<MapPageState> {
     }
   }
 
-  void subscribeToLocationUpdates() {
-    _locationService.subscribeToLocationUpdates(
-      circleId: state.currentCircleId,
-      useSimulation: state.useSimulation,
-      onLocationUpdate: (loc, points) {
-        print('Location update: $loc');
-        print('Points update: $points');
-        state = state.copyWith(
-          currentLocation: loc,
-          osrmRoutePoints: points,
-          trackingPoints: [...state.trackingPoints, ...points],
-        );
-      },
-    );
-  }
+  /// REMOVED FOR APP STORE SAFETY
+  /// Continuous location tracking replaced with manual check-ins
+  /// Use checkInAtLocation() method instead for user-controlled location sharing
 
   void subscribeToOtherUsersLocations() {
     final currentUserId = Supabase.instance.client.auth.currentUser!.id;
@@ -240,6 +226,16 @@ class MapNotifier extends StateNotifier<MapPageState> {
         state = state.copyWith(otherUsersLocations: others);
       },
     );
+  }
+
+  void subscribeToUserPosts() {
+    print('SUBSCRIBE TO USER POSTS');
+    _locationService.subscribeToPost(
+        circleId: state.currentCircleId,
+        onPostsUpdate: (post) {
+          print('READ POST: $post');
+          state = state.copyWith(posts: post);
+        });
   }
 
   Future<void> getPlaces(String circleId) async {
@@ -281,8 +277,8 @@ class MapNotifier extends StateNotifier<MapPageState> {
   Future<void> _enterStaticMode() async {
     state = state.copyWith(
       isLoading: false,
-      hasCircle: false,
-      joinedCircles: [],
+      //hasCircle: false,
+      //  joinedCircles: [],
       currentCircleId: '',
       circleName: null,
       circleMembers: [],
@@ -302,10 +298,8 @@ class MapNotifier extends StateNotifier<MapPageState> {
     print('🎮 Toggling simulation: $useSimulation');
     state = state.copyWith(useSimulation: useSimulation);
 
-    // Restart location subscription with new simulation setting
-    if (state.hasCircle && state.currentCircleId.isNotEmpty) {
-      subscribeToLocationUpdates();
-    }
+    // Note: Simulation removed for App Store safety
+    // Location updates now happen only via manual check-ins
   }
 
   /// Manual check-in at current location
@@ -329,6 +323,19 @@ class MapNotifier extends StateNotifier<MapPageState> {
         userId,
         location,
         false, // Not paused, this is an active check-in
+      );
+
+      await _locationService.addPost(
+        post: PostModel(
+          circleId: state.currentCircleId,
+          userId: userId,
+          name: 'Test post',
+          lat: 3.168697,
+          lng: 101.655149,
+          createdBy: userId,
+          createdAt: DateTime.now().toUtc(),
+          updatedAt: DateTime.now().toUtc(),
+        ),
       );
 
       // Update current location in state

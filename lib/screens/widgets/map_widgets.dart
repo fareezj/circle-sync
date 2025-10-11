@@ -1,9 +1,11 @@
 import 'package:circle_sync/features/circles/data/models/circle_model.dart';
 import 'package:circle_sync/features/map/data/models/map_models.dart';
 import 'package:circle_sync/features/map/presentation/providers/map_providers.dart';
+import 'package:circle_sync/models/post_model.dart';
 import 'package:circle_sync/providers/app_configs/app_configs_provider.dart';
 import 'package:circle_sync/screens/widgets/member_marker.dart';
 import 'package:circle_sync/screens/widgets/place_marker.dart';
+import 'package:circle_sync/screens/widgets/post_marker.dart';
 import 'package:circle_sync/screens/widgets/user_marker.dart';
 import 'package:circle_sync/utils/coordinate_extractor.dart';
 import 'package:flutter/material.dart';
@@ -21,11 +23,14 @@ class MapWidget extends ConsumerStatefulWidget {
   final List<CircleMembersModel>? members;
   final VoidCallback onCurrentLocationTap;
   final List<PlacesModel>? places;
+  final Map<String, PostModel>? posts;
   final void Function(String userId, LatLng location) onOtherUserTap;
+  final void Function(String userId, PostModel post) onOtherUserTapPost;
 
   const MapWidget({
     super.key,
     this.places,
+    this.posts,
     required this.userModel,
     required this.members,
     required this.mapController,
@@ -33,6 +38,7 @@ class MapWidget extends ConsumerStatefulWidget {
     required this.hasCircle,
     required this.onCurrentLocationTap,
     required this.onOtherUserTap,
+    required this.onOtherUserTapPost,
     this.selectedPlace,
   });
 
@@ -106,6 +112,28 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
         );
       }
     }
+
+    // Posts markers
+    widget.posts?.forEach((postId, post) {
+      print('PLACE POSTS LOCATION: $post');
+      markers.add(
+        Marker(
+          point: LatLng(post.lat, post.lng),
+          width: 200, // <-- match the child’s max width
+          height: 200, // <-- match the child’s max height
+          child: GestureDetector(
+            onTap: () {
+              ref.read(mapNotifierProvider.notifier).updateSelectedPost(post);
+            },
+            child: PostMarker(
+              post: post,
+              isSelected:
+                  ref.read(mapNotifierProvider).selectedPost?.id == post.id,
+            ),
+          ),
+        ),
+      );
+    });
 
     // Other users' markers
     widget.mapState.otherUsersLocations.forEach((userId, loc) {

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:circle_sync/models/post_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
@@ -183,6 +184,33 @@ class LocationService {
     } catch (e) {
       print('❌ Unexpected error saving location: $e');
     }
+  }
+
+  Future<void> addPost({required PostModel post}) async {
+    final result = await _supabase.from('posts').insert(post.toJson());
+  }
+
+  Future<void> subscribeToPost(
+      {required String circleId,
+      required Function(Map<String, PostModel>) onPostsUpdate}) async {
+    final Map<String, PostModel> updated = {};
+
+    final result = _supabase
+        .from('posts')
+        .stream(primaryKey: ['id'])
+        .eq('circle_id', circleId)
+        .listen((rows) {
+          print('🎯 Real-time posts update received: ${rows.length} rows');
+
+          for (var row in rows as List) {
+            final rowUid = row['id'] as int;
+            final lat = (row['lat'] as num).toDouble();
+            final lng = (row['lng'] as num).toDouble();
+            updated[rowUid.toString()] = PostModel.fromJson(row);
+          }
+          onPostsUpdate(updated);
+        });
+    print('SUBSCRIBE POSTS: $result');
   }
 
   /// Stream other members' locations in real time
