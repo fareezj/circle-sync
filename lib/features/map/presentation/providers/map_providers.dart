@@ -105,8 +105,6 @@ class MapNotifier extends StateNotifier<MapPageState> {
     final username = await ref.watch(getUsernameProvider.future);
     final userId = await ref.watch(getUserIdProvider.future);
 
-    print('JOINED CIRCLES: $circles');
-
     return circles.fold((l) {
       state = state.copyWith(
         isLoading: false,
@@ -131,16 +129,20 @@ class MapNotifier extends StateNotifier<MapPageState> {
 
       // Update state with the selected circle
       final members = await circleUsecase.getCircleMembers(pointedCircle.id);
+
+      members.fold((err) {
+        print('AWOW MEMBERS: ${err.errorMessage}');
+      }, (res) {
+        print('AWOW ADD MEMBER: ${res[0].name}');
+        state = state.copyWith(circleMembers: res);
+      });
+
       state = state.copyWith(
         isLoading: false,
         hasCircle: true,
         joinedCircles: circles,
         currentCircleId: pointedCircle.id,
         circleName: pointedCircle.name,
-        circleMembers: members.fold(
-          (l) => [],
-          (members) => members,
-        ),
         currentUser: CircleMembersModel(
           userId: userId ?? '',
           name: username ?? '',
@@ -166,7 +168,7 @@ class MapNotifier extends StateNotifier<MapPageState> {
     final secureStorage = ref.read(secureStorageServiceProvider);
     await secureStorage.writeData('currentCircleId', circle.id);
 
-    final members = await circleUsecase.getCircleMembers(circle.id);
+    //final members = await circleUsecase.getCircleMembers(circle.id);
 
     // Update state with the new circle details
     state = state.copyWith(
@@ -174,10 +176,6 @@ class MapNotifier extends StateNotifier<MapPageState> {
       hasCircle: true,
       currentCircleId: circle.id,
       circleName: circle.name,
-      circleMembers: members.fold(
-        (l) => [],
-        (members) => members,
-      ),
     );
 
     try {
@@ -286,7 +284,6 @@ class MapNotifier extends StateNotifier<MapPageState> {
       //  joinedCircles: [],
       currentCircleId: '',
       circleName: null,
-      circleMembers: [],
     );
     await _locationService.initStaticLocation(
       onLocationUpdate: _onStaticLocation,

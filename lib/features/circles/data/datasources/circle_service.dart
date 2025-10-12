@@ -132,18 +132,18 @@ class CircleService {
 
   Future<List<CircleMembersModel>> getCircleMembers(String circleId) async {
     try {
-      // 1) Fetch circle members + join on users to get name
+      // 1) Fetch circle members + join on profiles to get name
       final response = await _supabase.from('circle_members').select('''
     user_id,
     role,
-    users ( name )
+    profiles ( name )
   ''').eq('circle_id', circleId);
 
       // 2) Map the result into your model
       final members = (response as List<dynamic>).map((item) {
         return CircleMembersModel(
           userId: item['user_id'] as String,
-          name: (item['users'] as Map<String, dynamic>)['name'] as String,
+          name: (item['profiles'] as Map<String, dynamic>)['name'] as String,
           role: item['role'] as String,
         );
       }).toList();
@@ -191,6 +191,7 @@ class CircleService {
         return CircleModel.fromMap(json);
       }).toList();
     } catch (e) {
+      print(e);
       throw Exception('Error fetching joined circles: $e');
     }
   }

@@ -305,23 +305,6 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
                                           .updateSelectedChipItem(i),
                                       children: [
                                         CircleBottomSheet(
-                                          members: mapState.circleMembers,
-                                          circle: mapState.joinedCircles
-                                                  .where((e) =>
-                                                      e.id ==
-                                                      mapState.currentCircleId)
-                                                  .isNotEmpty
-                                              ? mapState.joinedCircles
-                                                  .where((e) =>
-                                                      e.id ==
-                                                      mapState.currentCircleId)
-                                                  .first
-                                              : null,
-                                          hasCircle: mapState.hasCircle,
-                                          onCircleTap: (c) {
-                                            loadNewCircle(c);
-                                            _recenterMap();
-                                          },
                                           onCreateCircle: () {},
                                         ),
                                         MembersBottomSheet(
