@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:circle_sync/features/circles/data/models/circle_model.dart';
 import 'package:circle_sync/features/map/data/models/map_models.dart';
 import 'package:circle_sync/models/circle_model.dart';
@@ -26,6 +28,7 @@ class MapPageState {
   final Map<String, PostModel> posts;
   final int selectedChipItem;
   final bool isLocationAlwaysAllowed;
+  final File? chosenPostImage;
 
   MapPageState({
     required this.isLoading,
@@ -49,6 +52,7 @@ class MapPageState {
     this.posts = const {},
     this.selectedChipItem = 0,
     this.isLocationAlwaysAllowed = false,
+    this.chosenPostImage,
   });
   factory MapPageState.initial() {
     return MapPageState(
@@ -73,31 +77,32 @@ class MapPageState {
       posts: {},
       selectedChipItem: 0,
       isLocationAlwaysAllowed: false,
+      chosenPostImage: null,
     );
   }
-  MapPageState copyWith({
-    List<PlacesModel>? placeList,
-    bool? isLoading,
-    bool? useSimulation,
-    List<CircleModel>? joinedCircles,
-    String? currentCircleId,
-    bool? hasCircle,
-    String? circleName,
-    List<CircleMembersModel>? circleMembers,
-    CircleMembersModel? selectedMember,
-    PostModel? selectedPost,
-    CircleMembersModel? currentUser,
-    bool? isSharingLocation,
-    LatLng? selectedPlace,
-    LatLng? currentLocation,
-    LatLng? destinationLocation,
-    List<LatLng>? osrmRoutePoints,
-    List<LatLng>? trackingPoints,
-    Map<String, LatLng>? otherUsersLocations,
-    Map<String, PostModel>? posts,
-    int? selectedChipItem,
-    bool? isLocationAlwaysAllowed,
-  }) {
+  MapPageState copyWith(
+      {List<PlacesModel>? placeList,
+      bool? isLoading,
+      bool? useSimulation,
+      List<CircleModel>? joinedCircles,
+      String? currentCircleId,
+      bool? hasCircle,
+      String? circleName,
+      List<CircleMembersModel>? circleMembers,
+      CircleMembersModel? selectedMember,
+      PostModel? selectedPost,
+      CircleMembersModel? currentUser,
+      bool? isSharingLocation,
+      LatLng? selectedPlace,
+      LatLng? currentLocation,
+      LatLng? destinationLocation,
+      List<LatLng>? osrmRoutePoints,
+      List<LatLng>? trackingPoints,
+      Map<String, LatLng>? otherUsersLocations,
+      Map<String, PostModel>? posts,
+      int? selectedChipItem,
+      bool? isLocationAlwaysAllowed,
+      File? chosenPostImage}) {
     return MapPageState(
       isLoading: isLoading ?? this.isLoading,
       placeList: placeList ?? this.placeList,
@@ -118,6 +123,7 @@ class MapPageState {
       trackingPoints: trackingPoints ?? this.trackingPoints,
       otherUsersLocations: otherUsersLocations ?? this.otherUsersLocations,
       posts: posts ?? this.posts,
+      chosenPostImage: chosenPostImage ?? this.chosenPostImage,
       selectedChipItem: selectedChipItem ?? this.selectedChipItem,
       isLocationAlwaysAllowed:
           isLocationAlwaysAllowed ?? this.isLocationAlwaysAllowed,

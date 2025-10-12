@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:circle_sync/features/circles/data/models/circle_model.dart';
 import 'package:circle_sync/features/circles/domain/usecases/circle_usecase.dart';
 import 'package:circle_sync/features/map/data/models/map_models.dart';
@@ -12,7 +15,9 @@ import 'package:circle_sync/services/permissions.dart';
 
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:mime/mime.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -343,6 +348,28 @@ class MapNotifier extends StateNotifier<MapPageState> {
       print('✅ Manual check-in successful!');
     } catch (e) {
       print('❌ Error during manual check-in: $e');
+    }
+  }
+
+  Future<void> addPostImage(ImageSource src) async {
+    try {
+      ref.read(baseLoadingNotifier.notifier).setLoading(true);
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(source: src);
+      if (picked != null) {
+        state = state.copyWith(chosenPostImage: File(picked.path));
+      }
+      if (picked == null) return;
+      final bytes = await picked.readAsBytes();
+      final base64Content = base64Encode(bytes);
+      final fileName = picked.name;
+      final fileSize = bytes.length;
+      final mimeType =
+          lookupMimeType(picked.path) ?? 'application/octet-stream';
+    } catch (e) {
+      throw Exception(e);
+    } finally {
+      ref.read(baseLoadingNotifier.notifier).setLoading(false);
     }
   }
 }

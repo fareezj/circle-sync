@@ -10,6 +10,7 @@ import 'package:circle_sync/providers/app_configs/app_configs_provider.dart';
 import 'package:circle_sync/screens/widgets/circle_bottom_sheet.dart';
 import 'package:circle_sync/services/geofence_service.dart';
 import 'package:circle_sync/utils/app_colors.dart';
+import 'package:circle_sync/widgets/add_post_dialog.dart';
 import 'package:circle_sync/widgets/global_message.dart';
 import 'package:circle_sync/widgets/loading_indicator.dart';
 import 'package:circle_sync/widgets/message_overlay.dart';
@@ -23,6 +24,7 @@ import 'package:circle_sync/screens/widgets/members_bottom_sheet.dart';
 import 'package:circle_sync/screens/widgets/map_info.dart';
 import 'package:circle_sync/features/map/presentation/providers/map_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:uuid/v4.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
@@ -93,6 +95,7 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final mapState = ref.watch(mapNotifierProvider);
+    final pageNotifier = ref.watch(mapNotifierProvider.notifier);
     final selectedChipItem = ref.watch(mapNotifierProvider).selectedChipItem;
     final isLoading = ref.watch(baseLoadingNotifier);
 
@@ -185,56 +188,64 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
                         children: [
                           const SizedBox(height: 10),
                           if (mapState.hasCircle)
-                            Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  ElevatedButton.icon(
-                                    onPressed: () async {
-                                      // Manual check-in - much safer for App Store
-                                      await _checkInAtCurrentLocation();
-                                    },
-                                    icon: const Icon(Icons.location_on),
-                                    label: const Text('Check In Here'),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.blue,
-                                      foregroundColor: Colors.white,
+                            IconButton(
+                                onPressed: () => addPostDialog(
+                                    context: context,
+                                    onClickCamera: () => pageNotifier
+                                        .addPostImage(ImageSource.camera),
+                                    onClickGallery: () => pageNotifier
+                                        .addPostImage(ImageSource.gallery),
+                                    onCreate: (_) {},
+                                    chosenImage: mapState.chosenPostImage),
+                                icon: Icon(Icons.post_add)),
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                ElevatedButton.icon(
+                                  onPressed: () async {
+                                    // Manual check-in - much safer for App Store
+                                    await _checkInAtCurrentLocation();
+                                  },
+                                  icon: const Icon(Icons.location_on),
+                                  label: const Text('Check In Here'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                ),
+                                // LocationSharingSwitch(
+                                //   isSelected: mapState.isSharingLocation,
+                                //   onClick: () {
+                                //     mapState.isSharingLocation
+                                //         ? ref
+                                //             .read(
+                                //                 mapNotifierProvider.notifier)
+                                //             .stopForegroundTask()
+                                //         : ref
+                                //             .read(
+                                //                 mapNotifierProvider.notifier)
+                                //             .startForegroundTask();
+                                //   },
+                                // ),
+                                GestureDetector(
+                                  onTap: () => _recenterMap(),
+                                  child: Container(
+                                    padding: EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(20.0),
+                                      color: AppColors.babyBlueCard,
+                                    ),
+                                    child: const Icon(
+                                      Icons.location_on,
+                                      color: AppColors.primaryBlue,
                                     ),
                                   ),
-                                  // LocationSharingSwitch(
-                                  //   isSelected: mapState.isSharingLocation,
-                                  //   onClick: () {
-                                  //     mapState.isSharingLocation
-                                  //         ? ref
-                                  //             .read(
-                                  //                 mapNotifierProvider.notifier)
-                                  //             .stopForegroundTask()
-                                  //         : ref
-                                  //             .read(
-                                  //                 mapNotifierProvider.notifier)
-                                  //             .startForegroundTask();
-                                  //   },
-                                  // ),
-                                  GestureDetector(
-                                    onTap: () => _recenterMap(),
-                                    child: Container(
-                                      padding: EdgeInsets.all(12),
-                                      decoration: BoxDecoration(
-                                        borderRadius:
-                                            BorderRadius.circular(20.0),
-                                        color: AppColors.babyBlueCard,
-                                      ),
-                                      child: const Icon(
-                                        Icons.location_on,
-                                        color: AppColors.primaryBlue,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
+                          ),
                           Expanded(
                             child: Container(
                               decoration: const BoxDecoration(
