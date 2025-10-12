@@ -2,7 +2,7 @@ import 'package:circle_sync/features/circles/data/models/circle_model.dart';
 import 'package:circle_sync/features/map/data/models/map_models.dart';
 import 'package:circle_sync/features/map/presentation/providers/map_providers.dart';
 import 'package:circle_sync/models/post_model.dart';
-import 'package:circle_sync/providers/app_configs/app_configs_provider.dart';
+
 import 'package:circle_sync/screens/widgets/member_marker.dart';
 import 'package:circle_sync/screens/widgets/place_marker.dart';
 import 'package:circle_sync/screens/widgets/post_marker.dart';
@@ -50,22 +50,53 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
   late List<Marker> markers;
   late List<Polyline> polylines;
 
+  // Cache markers to avoid rebuilding on every map movement
+  List<Marker>? _cachedMarkers;
+  String? _lastMarkersKey;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {});
   }
 
+  String _createMarkersKey() {
+    // Create a key that changes only when marker data actually changes
+    final userLoc = widget.mapState.currentLocation?.toString() ?? '';
+    final otherUsers = widget.mapState.otherUsersLocations.toString();
+    final places = widget.places?.map((p) => p.title).join(',') ?? '';
+    final posts = widget.posts?.keys.join(',') ?? '';
+    final selectedMember =
+        ref.read(mapNotifierProvider).selectedMember?.userId ?? '';
+    final selectedPlace =
+        ref.read(mapNotifierProvider).selectedPlace?.toString() ?? '';
+    final selectedPost = ref.read(mapNotifierProvider).selectedPost?.id ?? '';
+
+    return '$userLoc|$otherUsers|$places|$posts|$selectedMember|$selectedPlace|$selectedPost';
+  }
+
   void _buildMarkers() {
+    // Create a key based on the current data state to detect changes
+    final currentKey = _createMarkersKey();
+
+    // Use cached markers if data hasn't changed
+    if (_cachedMarkers != null && _lastMarkersKey == currentKey) {
+      markers = _cachedMarkers!;
+      return;
+    }
+
     markers = <Marker>[];
 
     // Current user marker
+    final selectedMemberId =
+        ref.read(mapNotifierProvider).selectedMember?.userId;
     if (widget.mapState.currentLocation != null) {
       markers.add(
         Marker(
+          key: ValueKey('current_user_${widget.userModel.userId}'),
           point: widget.mapState.currentLocation!,
-          width: 200, // <-- match the child’s max width
-          height: 100, // <-- match the child’s max height
+          width: 200, // <-- match the child's max width
+          height: 100, // <-- match the child's max height
           child: GestureDetector(
             onTap: () {
               ref
@@ -73,10 +104,9 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
                   .updateSelectedMember(widget.userModel);
             },
             child: UserMarker(
+              key: ValueKey('user_marker_${widget.userModel.userId}'),
               userName: widget.userModel.name,
-              isSelected:
-                  ref.read(mapNotifierProvider).selectedMember?.userId ==
-                      widget.userModel.userId,
+              isSelected: selectedMemberId == widget.userModel.userId,
             ),
           ),
         ),
@@ -84,6 +114,7 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
     }
 
     // Place markers
+    final selectedPlace = ref.read(mapNotifierProvider).selectedPlace;
     if (widget.places != null) {
       print('🗺️ MapWidget received ${widget.places!.length} places');
       for (var place in widget.places!) {
@@ -93,8 +124,10 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
         print('     → Marker at: ${latLng.latitude}, ${latLng.longitude}');
         markers.add(
           Marker(
-            width: 200, // <-- match the child’s max width
-            height: 100, // <-- match the child’s max height
+            key: ValueKey(
+                'place_${place.title}_${latLng.latitude}_${latLng.longitude}'),
+            width: 200, // <-- match the child's max width
+            height: 100, // <-- match the child's max height
             point: LatLng(latLng.latitude, latLng.longitude),
             child: GestureDetector(
               onTap: () {
@@ -103,9 +136,9 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
                     .updateSelectedPlace(latLng);
               },
               child: PlaceMarker(
+                key: ValueKey('place_marker_${place.title}'),
                 place: place,
-                isSelected:
-                    ref.read(mapNotifierProvider).selectedPlace == latLng,
+                isSelected: selectedPlace == latLng,
               ),
             ),
           ),
@@ -114,21 +147,25 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
     }
 
     // Posts markers
+    final selectedPostId = ref.read(mapNotifierProvider).selectedPost?.id;
     widget.posts?.forEach((postId, post) {
       print('PLACE POSTS LOCATION: $post');
       markers.add(
         Marker(
+          key: ValueKey(
+              'post_${post.id}'), // Add unique key for stable widget identity
           point: LatLng(post.lat, post.lng),
-          width: 50, // <-- match the child’s max width
-          height: 50, // <-- match the child’s max height
+          width: 50, // <-- match the child's max width
+          height: 50, // <-- match the child's max height
           child: GestureDetector(
             onTap: () {
               ref.read(mapNotifierProvider.notifier).updateSelectedPost(post);
             },
             child: PostMarker(
+              key: ValueKey(
+                  'post_marker_${post.id}'), // Add key to PostMarker too
               post: post,
-              isSelected:
-                  ref.read(mapNotifierProvider).selectedPost?.id == post.id,
+              isSelected: selectedPostId == post.id,
             ),
           ),
         ),
@@ -172,9 +209,10 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
       debugPrint('✅ Found member data for userId: $userId - ${member.name}');
       markers.add(
         Marker(
+          key: ValueKey('member_$userId'),
           point: loc,
-          width: 200, // <-- match the child’s max width
-          height: 100, // <-- match the child’s max height
+          width: 200, // <-- match the child's max width
+          height: 100, // <-- match the child's max height
           child: GestureDetector(
             onTap: () {
               ref
@@ -182,10 +220,9 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
                   .updateSelectedMember(member);
             },
             child: MemberMarker(
+              key: ValueKey('member_marker_$userId'),
               user: member,
-              isSelected:
-                  ref.read(mapNotifierProvider).selectedMember?.userId ==
-                      userId,
+              isSelected: selectedMemberId == userId,
             ),
           ),
         ),
@@ -207,6 +244,10 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
     //     ),
     //   );
     // }
+
+    // Cache the markers and update the key
+    _cachedMarkers = List.from(markers);
+    _lastMarkersKey = currentKey;
   }
 
   void _buildPolylines(

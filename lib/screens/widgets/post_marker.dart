@@ -1,11 +1,12 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:circle_sync/models/post_model.dart';
 import 'package:circle_sync/utils/app_colors.dart';
 import 'package:circle_sync/widgets/text_widgets.dart';
 import 'package:flutter/material.dart';
 
-class PostMarker extends StatelessWidget {
+class PostMarker extends StatefulWidget {
   final PostModel post;
   final bool isSelected;
 
@@ -16,7 +17,47 @@ class PostMarker extends StatelessWidget {
   });
 
   @override
+  State<PostMarker> createState() => _PostMarkerState();
+}
+
+class _PostMarkerState extends State<PostMarker>
+    with AutomaticKeepAliveClientMixin {
+  Uint8List? _cachedImageBytes;
+
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    _decodeImage();
+  }
+
+  @override
+  void didUpdateWidget(PostMarker oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Only re-decode if the image data actually changed
+    if (oldWidget.post.image != widget.post.image) {
+      _decodeImage();
+    }
+  }
+
+  void _decodeImage() {
+    if (widget.post.image != null) {
+      try {
+        _cachedImageBytes = base64Decode(widget.post.image!);
+      } catch (e) {
+        debugPrint('Error decoding image for post ${widget.post.id}: $e');
+        _cachedImageBytes = null;
+      }
+    } else {
+      _cachedImageBytes = null;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
     return SizedBox(
       width: 10, // Fixed size regardless of marker dimensions
       height: 10, // Fixed size regardless of marker dimensions
@@ -30,15 +71,15 @@ class PostMarker extends StatelessWidget {
               backgroundColor: AppColors.blueBorder,
               child: TextWidgets.mainBold(
                 color: AppColors.white,
-                title: post.name.isNotEmpty
-                    ? post.name.substring(0, 1).toUpperCase()
+                title: widget.post.name.isNotEmpty
+                    ? widget.post.name.substring(0, 1).toUpperCase()
                     : 'P',
                 fontSize: 14,
               ),
             ),
           ),
           // Selected popup (conditional) - positioned above marker
-          if (isSelected)
+          if (widget.isSelected)
             Positioned(
               bottom: 55, // Position above the marker
               left: -50,
@@ -63,9 +104,9 @@ class PostMarker extends StatelessWidget {
                     SizedBox(
                       width: 108,
                       child: Text(
-                        post.name.length > 25
-                            ? '${post.name.substring(0, 25)}...'
-                            : post.name,
+                        widget.post.name.length > 25
+                            ? '${widget.post.name.substring(0, 25)}...'
+                            : widget.post.name,
                         style: const TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
@@ -75,17 +116,19 @@ class PostMarker extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    // Fixed size image preview
-                    if (post.image != null)
-                      Container(
-                        width: 100,
-                        height: 100,
-                        margin: const EdgeInsets.only(top: 3),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(4),
-                          image: DecorationImage(
-                            image: MemoryImage(base64Decode(post.image!)),
-                            fit: BoxFit.cover,
+                    // Fixed size image preview using cached bytes
+                    if (_cachedImageBytes != null)
+                      RepaintBoundary(
+                        child: Container(
+                          width: 100,
+                          height: 100,
+                          margin: const EdgeInsets.only(top: 3),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(4),
+                            image: DecorationImage(
+                              image: MemoryImage(_cachedImageBytes!),
+                              fit: BoxFit.cover,
+                            ),
                           ),
                         ),
                       ),
