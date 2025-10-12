@@ -345,7 +345,7 @@ class MapNotifier extends StateNotifier<MapPageState> {
           name: postName,
           image: imageBase64,
           lat: location.latitude,
-          lng: location.longitude,
+          lng: 101.56826633338597,
           createdBy: userId,
           createdAt: postTime.toUtc(),
           updatedAt: postTime.toUtc(),
