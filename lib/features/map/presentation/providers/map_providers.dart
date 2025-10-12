@@ -308,7 +308,12 @@ class MapNotifier extends StateNotifier<MapPageState> {
   }
 
   /// Manual check-in at current location
-  Future<void> checkInAtLocation(LatLng location) async {
+  Future<void> checkInAtLocation({
+    required LatLng location,
+    required String postName,
+    required DateTime postTime,
+  }) async {
+    print('📍 Manual check-in at: ${location.latitude}, ${location.longitude}');
     if (state.currentCircleId.isEmpty) {
       print('❌ No circle selected for check-in');
       return;
@@ -329,17 +334,24 @@ class MapNotifier extends StateNotifier<MapPageState> {
         location,
         false, // Not paused, this is an active check-in
       );
+      String? imageBase64;
+
+      final bytes = await state.chosenPostImage?.readAsBytes();
+      if (bytes != null) {
+        imageBase64 = base64Encode(bytes);
+      }
 
       await _locationService.addPost(
         post: PostModel(
           circleId: state.currentCircleId,
           userId: userId,
-          name: 'Test post',
-          lat: 3.168697,
-          lng: 101.655149,
+          name: postName,
+          image: imageBase64,
+          lat: location.latitude,
+          lng: location.longitude,
           createdBy: userId,
-          createdAt: DateTime.now().toUtc(),
-          updatedAt: DateTime.now().toUtc(),
+          createdAt: postTime.toUtc(),
+          updatedAt: postTime.toUtc(),
         ),
       );
 

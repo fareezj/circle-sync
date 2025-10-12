@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:circle_sync/models/post_model.dart';
 import 'package:circle_sync/utils/app_colors.dart';
 import 'package:circle_sync/widgets/text_widgets.dart';
@@ -82,7 +84,7 @@ class PostMarker extends StatelessWidget {
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(4),
                           image: DecorationImage(
-                            image: NetworkImage(post.image!),
+                            image: MemoryImage(base64Decode(post.image!)),
                             fit: BoxFit.cover,
                           ),
                         ),

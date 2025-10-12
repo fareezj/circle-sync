@@ -188,64 +188,69 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
                         children: [
                           const SizedBox(height: 10),
                           if (mapState.hasCircle)
-                            IconButton(
-                                onPressed: () => addPostDialog(
-                                    context: context,
-                                    onClickCamera: () => pageNotifier
-                                        .addPostImage(ImageSource.camera),
-                                    onClickGallery: () => pageNotifier
-                                        .addPostImage(ImageSource.gallery),
-                                    onCreate: (_) {},
-                                    chosenImage: mapState.chosenPostImage),
-                                icon: Icon(Icons.post_add)),
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                ElevatedButton.icon(
-                                  onPressed: () async {
-                                    // Manual check-in - much safer for App Store
-                                    await _checkInAtCurrentLocation();
-                                  },
-                                  icon: const Icon(Icons.location_on),
-                                  label: const Text('Check In Here'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.blue,
-                                    foregroundColor: Colors.white,
-                                  ),
-                                ),
-                                // LocationSharingSwitch(
-                                //   isSelected: mapState.isSharingLocation,
-                                //   onClick: () {
-                                //     mapState.isSharingLocation
-                                //         ? ref
-                                //             .read(
-                                //                 mapNotifierProvider.notifier)
-                                //             .stopForegroundTask()
-                                //         : ref
-                                //             .read(
-                                //                 mapNotifierProvider.notifier)
-                                //             .startForegroundTask();
-                                //   },
-                                // ),
-                                GestureDetector(
-                                  onTap: () => _recenterMap(),
-                                  child: Container(
-                                    padding: EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(20.0),
-                                      color: AppColors.babyBlueCard,
-                                    ),
-                                    child: const Icon(
-                                      Icons.location_on,
-                                      color: AppColors.primaryBlue,
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  ElevatedButton.icon(
+                                    onPressed: () async {
+                                      // Manual check-in - much safer for App Store
+                                      addPostDialog(
+                                          context: context,
+                                          onClickCamera: () => pageNotifier
+                                              .addPostImage(ImageSource.camera),
+                                          onClickGallery: () =>
+                                              pageNotifier.addPostImage(
+                                                  ImageSource.gallery),
+                                          onCreate: (name, time) async {
+                                            print('AWOW');
+                                            await _checkInAtCurrentLocation(
+                                                postName: name, postTime: time);
+                                          },
+                                          chosenImage:
+                                              mapState.chosenPostImage);
+                                    },
+                                    icon: const Icon(Icons.location_on),
+                                    label: const Text('Check In Here'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.blue,
+                                      foregroundColor: Colors.white,
                                     ),
                                   ),
-                                ),
-                              ],
+                                  // LocationSharingSwitch(
+                                  //   isSelected: mapState.isSharingLocation,
+                                  //   onClick: () {
+                                  //     mapState.isSharingLocation
+                                  //         ? ref
+                                  //             .read(
+                                  //                 mapNotifierProvider.notifier)
+                                  //             .stopForegroundTask()
+                                  //         : ref
+                                  //             .read(
+                                  //                 mapNotifierProvider.notifier)
+                                  //             .startForegroundTask();
+                                  //   },
+                                  // ),
+                                  GestureDetector(
+                                    onTap: () => _recenterMap(),
+                                    child: Container(
+                                      padding: EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        borderRadius:
+                                            BorderRadius.circular(20.0),
+                                        color: AppColors.babyBlueCard,
+                                      ),
+                                      child: const Icon(
+                                        Icons.location_on,
+                                        color: AppColors.primaryBlue,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
                           Expanded(
                             child: Container(
                               decoration: const BoxDecoration(
@@ -465,21 +470,25 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
     if (loc != null) _mapController.move(loc, 13.0);
   }
 
-  Future<void> _checkInAtCurrentLocation() async {
+  Future<void> _checkInAtCurrentLocation(
+      {required String postName, required DateTime postTime}) async {
     try {
       // Simple one-time location request - much safer for App Store
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        desiredAccuracy: LocationAccuracy.best,
       );
 
       final location = LatLng(position.latitude, position.longitude);
       final mapState = ref.read(mapNotifierProvider);
 
-      if (mapState.hasCircle && mapState.currentCircleId.isNotEmpty) {
+      print('📍 Manual check-in at: ${mapState.hasCircle}');
+      print('📍 Manual check-in at: ${mapState.currentCircleId.isNotEmpty}');
+
+      if (mapState.hasCircle) {
         // Save check-in to database (not continuous tracking)
+
         await ref.read(mapNotifierProvider.notifier).checkInAtLocation(
-              location,
-            );
+            location: location, postName: postName, postTime: postTime);
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
