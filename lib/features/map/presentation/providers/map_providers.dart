@@ -282,7 +282,7 @@ class MapNotifier extends StateNotifier<MapPageState> {
       isLoading: false,
       //hasCircle: false,
       //  joinedCircles: [],
-      currentCircleId: '',
+      //currentCircleId: '',
       circleName: null,
     );
     await _locationService.initStaticLocation(
@@ -345,7 +345,7 @@ class MapNotifier extends StateNotifier<MapPageState> {
           name: postName,
           image: imageBase64,
           lat: location.latitude,
-          lng: 101.56826633338597,
+          lng: 102.46826633338597,
           createdBy: userId,
           createdAt: postTime.toUtc(),
           updatedAt: postTime.toUtc(),
