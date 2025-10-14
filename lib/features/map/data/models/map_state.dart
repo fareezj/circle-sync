@@ -26,6 +26,7 @@ class MapPageState {
   final List<LatLng> osrmRoutePoints;
   final List<LatLng> trackingPoints;
   final Map<String, LatLng> otherUsersLocations;
+  final Map<String, PostModel> originalPosts;
   final Map<String, PostModel> posts;
   final int selectedChipItem;
   final bool isLocationAlwaysAllowed;
@@ -51,6 +52,7 @@ class MapPageState {
     this.osrmRoutePoints = const [],
     this.trackingPoints = const [],
     this.otherUsersLocations = const {},
+    this.originalPosts = const {},
     this.posts = const {},
     this.selectedChipItem = 0,
     this.isLocationAlwaysAllowed = false,
@@ -77,6 +79,7 @@ class MapPageState {
       osrmRoutePoints: [],
       trackingPoints: [],
       otherUsersLocations: {},
+      originalPosts: {},
       posts: {},
       selectedChipItem: 0,
       isLocationAlwaysAllowed: false,
@@ -103,6 +106,7 @@ class MapPageState {
     List<LatLng>? osrmRoutePoints,
     List<LatLng>? trackingPoints,
     Map<String, LatLng>? otherUsersLocations,
+    Map<String, PostModel>? originalPosts,
     Map<String, PostModel>? posts,
     int? selectedChipItem,
     bool? isLocationAlwaysAllowed,
@@ -128,6 +132,7 @@ class MapPageState {
       osrmRoutePoints: osrmRoutePoints ?? this.osrmRoutePoints,
       trackingPoints: trackingPoints ?? this.trackingPoints,
       otherUsersLocations: otherUsersLocations ?? this.otherUsersLocations,
+      originalPosts: originalPosts ?? this.originalPosts,
       posts: posts ?? this.posts,
       chosenPostImage: chosenPostImage ?? this.chosenPostImage,
       selectedChipItem: selectedChipItem ?? this.selectedChipItem,

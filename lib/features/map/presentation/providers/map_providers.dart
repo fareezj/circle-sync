@@ -158,7 +158,7 @@ class MapNotifier extends StateNotifier<MapPageState> {
       _postsManager.subscribeToPostsUpdates(
         circleId: circle.id,
         onPostsUpdate: (posts) {
-          state = state.copyWith(posts: posts);
+          state = state.copyWith(posts: posts, originalPosts: posts);
         },
       );
     } catch (e) {
@@ -214,8 +214,24 @@ class MapNotifier extends StateNotifier<MapPageState> {
     return DateFormat('dd MMM yyyy').format(state.selectedDate);
   }
 
+  /// Returns a map of posts that match the provided [date] (matching day/month/year).
+  Map<String, PostModel> getPostsForDate(DateTime date) {
+    final filteredEntries = state.originalPosts.entries.where((entry) {
+      final createdLocal = entry.value.createdAt;
+      return createdLocal.year == date.year &&
+          createdLocal.month == date.month &&
+          createdLocal.day == date.day;
+    });
+    return Map<String, PostModel>.fromEntries(filteredEntries);
+  }
+
+  /// Convenience getter for posts matching the currently selected date.
+  Map<String, PostModel> get postsForSelectedDate =>
+      getPostsForDate(state.selectedDate);
+
   void updateSelectedDate(DateTime dateTime) {
-    state = state.copyWith(selectedDate: dateTime);
+    state = state.copyWith(
+        selectedDate: dateTime, posts: getPostsForDate(dateTime));
   }
 
   void updateSelectedPlace(LatLng place) {
