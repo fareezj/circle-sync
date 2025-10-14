@@ -5,6 +5,7 @@ import 'package:circle_sync/models/post_model.dart';
 import 'package:circle_sync/utils/app_colors.dart';
 import 'package:circle_sync/widgets/text_widgets.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class PostMarker extends StatefulWidget {
   final PostModel post;
@@ -99,23 +100,15 @@ class _PostMarkerState extends State<PostMarker>
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // Truncated text with fixed width
-                    SizedBox(
-                      width: 108,
-                      child: Text(
-                        widget.post.name.length > 25
-                            ? '${widget.post.name.substring(0, 25)}...'
-                            : widget.post.name,
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
+                    TextWidgets.mainBold(
+                        title:
+                            '${DateFormat('dd MMM yyyy').format(widget.post.createdAt)} :' ??
+                                '-',
+                        textAlign: TextAlign.start,
+                        color: AppColors.textDisabled,
+                        fontSize: 10),
                     // Fixed size image preview using cached bytes
                     if (_cachedImageBytes != null)
                       RepaintBoundary(
@@ -132,6 +125,30 @@ class _PostMarkerState extends State<PostMarker>
                           ),
                         ),
                       ),
+                    SizedBox(height: 12),
+                    SizedBox(
+                        width: 120,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          children: [
+                            Expanded(
+                                flex: 1,
+                                child: TextWidgets.mainBold(
+                                    title:
+                                        '${widget.post.creatorName} :' ?? '-',
+                                    textAlign: TextAlign.start,
+                                    fontSize: 10)),
+                            Expanded(
+                              flex: 2,
+                              child: TextWidgets.mainSemiBold(
+                                  title: widget.post.name.length > 25
+                                      ? '${widget.post.name.substring(0, 25)}...'
+                                      : widget.post.name,
+                                  textAlign: TextAlign.start,
+                                  fontSize: 10),
+                            ),
+                          ],
+                        )),
                   ],
                 ),
               ),

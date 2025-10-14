@@ -7,6 +7,7 @@ class PostModel {
   final double lat;
   final double lng;
   final String createdBy;
+  final String? creatorName; // Add this field
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -19,6 +20,7 @@ class PostModel {
     required this.lat,
     required this.lng,
     required this.createdBy,
+    this.creatorName, // Add this parameter
     required this.createdAt,
     required this.updatedAt,
   });
@@ -34,6 +36,7 @@ class PostModel {
       lat: (json['lat'] ?? 0.0).toDouble(),
       lng: (json['lng'] ?? 0.0).toDouble(),
       createdBy: json['created_by'] ?? '',
+      creatorName: json['creator_name'], // Add this line
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : DateTime.now(),
@@ -69,6 +72,7 @@ class PostModel {
     double? lat,
     double? lng,
     String? createdBy,
+    String? creatorName,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -81,6 +85,7 @@ class PostModel {
       lat: lat ?? this.lat,
       lng: lng ?? this.lng,
       createdBy: createdBy ?? this.createdBy,
+      creatorName: creatorName ?? this.creatorName,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

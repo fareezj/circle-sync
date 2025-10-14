@@ -102,7 +102,7 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
       if (circle != null) {
         await initGeofence(ref: ref, circleId: circle.id);
         await notifier.loadCircleDetails(circle, _mapController);
-        await notifier.getPlaces(circle.id);
+        //await notifier.getPlaces(circle.id);
       }
     } catch (e) {
       // Handle error appropriately - could show snackbar or log
@@ -169,8 +169,6 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
 
     return Positioned(
       top: 70.0,
-      right: 0.0,
-      left: 0.0,
       child: GestureDetector(
         onTap: () async {
           final DateTime? picked = await showDatePicker(
@@ -187,9 +185,10 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
           }
         },
         child: Container(
+          width: 150,
+          padding: EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: AppColors.serviceBgPeach,
-          ),
+              color: AppColors.white, borderRadius: BorderRadius.circular(12)),
           child: TextWidgets.mainRegular(
               title: ref.watch(mapNotifierProvider.notifier).selectedDate),
         ),

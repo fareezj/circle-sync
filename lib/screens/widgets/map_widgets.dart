@@ -149,7 +149,6 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
     // Posts markers
     final selectedPostId = ref.read(mapNotifierProvider).selectedPost?.id;
     widget.posts?.forEach((postId, post) {
-      print('PLACE POSTS LOCATION: $post');
       markers.add(
         Marker(
           key: ValueKey(
@@ -327,20 +326,6 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
             }).toList(),
           ),
         ],
-
-        // TEST: Always show a test geofence circle to verify rendering works
-        CircleLayer(
-          circles: [
-            CircleMarker(
-              point: LatLng(3.1390, 101.6869), // KLCC coordinates
-              radius: 500, // 500m radius
-              useRadiusInMeter: true,
-              color: Colors.red.withOpacity(0.3), // Red for test visibility
-              borderColor: Colors.red,
-              borderStrokeWidth: 5,
-            ),
-          ],
-        ),
 
         // Selected place highlight circle
         if (widget.selectedPlace != null)

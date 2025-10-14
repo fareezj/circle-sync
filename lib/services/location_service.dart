@@ -187,7 +187,27 @@ class LocationService {
   }
 
   Future<void> addPost({required PostModel post}) async {
-    final result = await _supabase.from('posts').insert(post.toJson());
+    await _supabase.from('posts').insert(post.toJson());
+  }
+
+  /// Get user names for a list of user IDs
+  Future<Map<String, String>> getUserNames(List<String> userIds) async {
+    try {
+      final response = await _supabase
+          .from('profiles') // or 'users' depending on your table name
+          .select('user_id, name')
+          .inFilter('user_id', userIds);
+
+      final Map<String, String> userNames = {};
+      for (final row in response as List) {
+        userNames[row['user_id'] as String] =
+            row['name'] as String? ?? 'Unknown User';
+      }
+      return userNames;
+    } catch (e) {
+      print('Error fetching user names: $e');
+      return {};
+    }
   }
 
   Future<void> subscribeToPost(
@@ -204,8 +224,6 @@ class LocationService {
 
           for (var row in rows as List) {
             final rowUid = row['id'] as int;
-            final lat = (row['lat'] as num).toDouble();
-            final lng = (row['lng'] as num).toDouble();
             updated[rowUid.toString()] = PostModel.fromJson(row);
           }
           onPostsUpdate(updated);
