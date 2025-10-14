@@ -84,6 +84,7 @@ class _AddPlaceBottomSheetState extends State<AddPlaceBottomSheet> {
                   TileLayer(
                     urlTemplate:
                         'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.wolf.circlesync',
                   ),
 
                   // show your picked pin

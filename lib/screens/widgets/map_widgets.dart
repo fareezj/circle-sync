@@ -292,6 +292,7 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
         // Base tiles
         TileLayer(
           urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          userAgentPackageName: 'com.wolf.circlesync',
         ),
 
         // Draw routes and tracking history
