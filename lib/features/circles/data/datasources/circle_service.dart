@@ -81,9 +81,12 @@ class CircleService {
         await _supabase.from('circle_members').insert({
           'circle_id': circle['circle_id'],
           'user_id': _supabase.auth.currentUser!.id,
+          'joined_at': DateTime.now().toUtc().toIso8601String(),
+          'role': 'member'
         });
       }
     } catch (e) {
+      print('ERROR: $e');
       throw Exception(e.toString());
     }
   }

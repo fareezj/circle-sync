@@ -28,6 +28,39 @@ class _PostMarkerState extends State<PostMarker>
   @override
   bool get wantKeepAlive => true;
 
+  /// Generate a consistent color for each user based on their user ID
+  Color _getUserColor() {
+    if (widget.post.userId.isEmpty) {
+      return AppColors.blueBorder; // Fallback to default color
+    }
+
+    // Generate a hash from the user ID for consistent color assignment
+    final hash = widget.post.userId.hashCode;
+
+    // Define a palette of distinct, readable colors
+    final colorPalette = [
+      const Color(0xFF2196F3), // Blue
+      const Color(0xFF4CAF50), // Green
+      const Color(0xFFFF9800), // Orange
+      const Color(0xFF9C27B0), // Purple
+      const Color(0xFFF44336), // Red
+      const Color(0xFF00BCD4), // Cyan
+      const Color(0xFFFFEB3B), // Yellow
+      const Color(0xFF795548), // Brown
+      const Color(0xFF607D8B), // Blue Grey
+      const Color(0xFFE91E63), // Pink
+      const Color(0xFF3F51B5), // Indigo
+      const Color(0xFF8BC34A), // Light Green
+      const Color(0xFFFF5722), // Deep Orange
+      const Color(0xFF673AB7), // Deep Purple
+      const Color(0xFF009688), // Teal
+    ];
+
+    // Use modulo to get a consistent index for this user
+    final colorIndex = hash.abs() % colorPalette.length;
+    return colorPalette[colorIndex];
+  }
+
   @override
   void initState() {
     super.initState();
@@ -68,16 +101,10 @@ class _PostMarkerState extends State<PostMarker>
           // Main marker (always visible)
           Positioned.fill(
             child: CircleAvatar(
-              radius: 20, // Fixed radius for consistent size
-              backgroundColor: AppColors.blueBorder,
-              child: TextWidgets.mainBold(
-                color: AppColors.white,
-                title: widget.post.name.isNotEmpty
-                    ? widget.post.name.substring(0, 1).toUpperCase()
-                    : 'P',
-                fontSize: 14,
-              ),
-            ),
+                radius: 12, // Fixed radius for consistent size
+                backgroundColor: _getUserColor(),
+                child:
+                    Icon(Icons.bookmark_add_rounded, color: AppColors.white)),
           ),
           // Selected popup (conditional) - positioned above marker
           if (widget.isSelected)
@@ -100,27 +127,28 @@ class _PostMarkerState extends State<PostMarker>
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     TextWidgets.mainBold(
-                        title:
-                            '${DateFormat('dd MMM yyyy').format(widget.post.createdAt)} :' ??
-                                '-',
+                        title: DateFormat('dd MMM yyyy')
+                            .format(widget.post.createdAt),
                         textAlign: TextAlign.start,
                         color: AppColors.textDisabled,
                         fontSize: 10),
                     // Fixed size image preview using cached bytes
                     if (_cachedImageBytes != null)
-                      RepaintBoundary(
-                        child: Container(
-                          width: 100,
-                          height: 100,
-                          margin: const EdgeInsets.only(top: 3),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(4),
-                            image: DecorationImage(
-                              image: MemoryImage(_cachedImageBytes!),
-                              fit: BoxFit.cover,
+                      Center(
+                        child: RepaintBoundary(
+                          child: Container(
+                            width: 100,
+                            height: 100,
+                            margin: const EdgeInsets.only(top: 3),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(4),
+                              image: DecorationImage(
+                                image: MemoryImage(_cachedImageBytes!),
+                                fit: BoxFit.cover,
+                              ),
                             ),
                           ),
                         ),
@@ -135,7 +163,7 @@ class _PostMarkerState extends State<PostMarker>
                                 flex: 1,
                                 child: TextWidgets.mainBold(
                                     title:
-                                        '${widget.post.creatorName} :' ?? '-',
+                                        '${widget.post.creatorName ?? "Unknown"} :',
                                     textAlign: TextAlign.start,
                                     fontSize: 10)),
                             Expanded(
