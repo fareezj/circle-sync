@@ -147,7 +147,7 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
     }
 
     // Posts markers
-    final selectedPostId = ref.read(mapNotifierProvider).selectedPost?.id;
+    final selectedPostId = ref.watch(mapNotifierProvider).selectedPost?.id;
     widget.posts?.forEach((postId, post) {
       markers.add(
         Marker(
@@ -161,10 +161,10 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
               ref.read(mapNotifierProvider.notifier).updateSelectedPost(post);
             },
             child: PostMarker(
+              ref: ref,
               key: ValueKey(
                   'post_marker_${post.id}'), // Add key to PostMarker too
               post: post,
-              isSelected: selectedPostId == post.id,
             ),
           ),
         ),
@@ -287,6 +287,12 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
       options: MapOptions(
         initialCenter: widget.mapState.currentLocation ?? LatLng(0, 0),
         initialZoom: 13,
+        onTap: (tapPosition, point) {
+          ref.read(mapNotifierProvider.notifier).updateSelectedPost(null);
+          print('✅ Post deselected');
+          final isSelected = ref.watch(mapNotifierProvider).selectedPost;
+          print('AWOW SELECTED POST: $isSelected');
+        },
       ),
       children: [
         // Base tiles

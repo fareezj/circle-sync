@@ -1,4 +1,5 @@
 // Flutter imports
+import 'package:circle_sync/screens/posts_bottom_sheet.dart';
 import 'package:circle_sync/widgets/text_widgets.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -225,7 +226,7 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
       controller: _scrollableController,
       initialChildSize: 0.2,
       minChildSize: 0.2,
-      maxChildSize: 1.0,
+      maxChildSize: 0.5,
       builder: (context, scrollController) => _buildBottomSheetContent(
         context,
         scrollController,
@@ -360,9 +361,20 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
         children: [
           CircleBottomSheet(onCreateCircle: () {}),
           _buildMembersBottomSheet(mapState),
-          _buildPlacesView(mapState),
+          _buildPostsBottomSheet(mapState),
         ],
       ),
+    );
+  }
+
+  Widget _buildPostsBottomSheet(MapPageState mapState) {
+    return PostsBottomSheet(
+      posts: mapState.originalPosts,
+      circleId: mapState.currentCircleId,
+      onPostSelected: (LatLng location) {
+        _mapController.move(location, 13.0);
+      },
+      onMemberAdded: (newId) {},
     );
   }
 

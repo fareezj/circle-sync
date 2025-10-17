@@ -242,7 +242,7 @@ class MapNotifier extends StateNotifier<MapPageState> {
     state = state.copyWith(selectedMember: member);
   }
 
-  void updateSelectedPost(PostModel post) {
+  void updateSelectedPost(PostModel? post) {
     state = state.copyWith(selectedPost: post);
   }
 

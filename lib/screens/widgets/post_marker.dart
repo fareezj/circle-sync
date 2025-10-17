@@ -1,20 +1,22 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:circle_sync/features/map/presentation/providers/map_providers.dart';
 import 'package:circle_sync/models/post_model.dart';
 import 'package:circle_sync/utils/app_colors.dart';
 import 'package:circle_sync/widgets/text_widgets.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 class PostMarker extends StatefulWidget {
+  final WidgetRef ref;
   final PostModel post;
-  final bool isSelected;
 
   const PostMarker({
     super.key,
+    required this.ref,
     required this.post,
-    this.isSelected = false,
   });
 
   @override
@@ -92,6 +94,8 @@ class _PostMarkerState extends State<PostMarker>
   @override
   Widget build(BuildContext context) {
     super.build(context); // Required for AutomaticKeepAliveClientMixin
+    final isSelected = widget.ref.watch(mapNotifierProvider).selectedPost;
+    print('AWOW SELECTED POST: $isSelected');
     return SizedBox(
       width: 10, // Fixed size regardless of marker dimensions
       height: 10, // Fixed size regardless of marker dimensions
@@ -107,7 +111,7 @@ class _PostMarkerState extends State<PostMarker>
                     Icon(Icons.bookmark_add_rounded, color: AppColors.white)),
           ),
           // Selected popup (conditional) - positioned above marker
-          if (widget.isSelected)
+          if (isSelected?.id == widget.post.id && isSelected != null)
             Positioned(
               bottom: 55, // Position above the marker
               left: -50,
