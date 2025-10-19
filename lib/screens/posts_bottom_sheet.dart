@@ -94,30 +94,40 @@ class PostsBottomSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
-          Expanded(
-            child: ListView.separated(
-              itemCount: posts.length,
-              physics: ClampingScrollPhysics(),
-              separatorBuilder: (context, index) => const Divider(),
-              itemBuilder: (context, index) {
-                List<PostModel> post = posts.values.toList();
-                return Column(
-                  children: [
-                    ListTile(
-                      title: Text(post[index].name),
-                      leading: const Icon(Icons.photo_size_select_actual),
-                      onTap: () {
-                        final postLocation =
-                            LatLng(post[index].lat, post[index].lng);
-                        onPostSelected(postLocation);
-                      },
-                    ),
-                    if (index == posts.length - 1) const Divider()
-                  ],
-                );
-              },
+          if (posts.isNotEmpty) ...[
+            Expanded(
+              child: ListView.separated(
+                itemCount: posts.length,
+                physics: ClampingScrollPhysics(),
+                separatorBuilder: (context, index) => const Divider(),
+                itemBuilder: (context, index) {
+                  List<PostModel> post = posts.values.toList();
+                  return Column(
+                    children: [
+                      ListTile(
+                        title: Text(post[index].name),
+                        leading: const Icon(Icons.photo_size_select_actual),
+                        onTap: () {
+                          final postLocation =
+                              LatLng(post[index].lat, post[index].lng);
+                          onPostSelected(postLocation);
+                        },
+                      ),
+                      if (index == posts.length - 1) const Divider()
+                    ],
+                  );
+                },
+              ),
             ),
-          ),
+          ] else ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 22),
+              child: Center(
+                child: TextWidgets.mainItalic(
+                    title: 'No posts available on this date'),
+              ),
+            )
+          ]
         ],
       ),
     );

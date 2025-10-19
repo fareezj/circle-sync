@@ -1,6 +1,5 @@
 import 'package:circle_sync/utils/app_colors.dart';
 import 'package:flutter/material.dart';
-import 'package:circle_sync/features/map/presentation/pages/widgets/circle_list_sheet.dart';
 import 'package:circle_sync/features/map/presentation/routers/circle_navigation_router.dart';
 import 'package:circle_sync/models/circle_model.dart';
 import 'package:circle_sync/widgets/confirm_button.dart';
@@ -81,34 +80,6 @@ class CircleInfoCard extends StatelessWidget {
                             'You need to create a circle to enable location sharing and tracking.',
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ConfirmButton(
-                              onClick: () {
-                                onShowCircleModal(
-                                    context: context,
-                                    initialRoute: '/add-circle',
-                                    onShowBack: false);
-                              },
-                              title: 'Create circle',
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: ConfirmButton(
-                              onClick: () {
-                                onShowCircleModal(
-                                    context: context,
-                                    initialRoute: '/join-circle',
-                                    onShowBack: false);
-                              },
-                              title: 'Join circle',
-                            ),
-                          ),
-                        ],
-                      ),
                     ],
                   ),
                 ),
@@ -127,6 +98,34 @@ class CircleInfoCard extends StatelessWidget {
                       TextWidgets.mainBold(title: circleName!, fontSize: 18.0),
                 ),
               ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: ConfirmButton(
+                    onClick: () {
+                      onShowCircleModal(
+                          context: context,
+                          initialRoute: '/add-circle',
+                          onShowBack: false);
+                    },
+                    title: 'Create circle',
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: ConfirmButton(
+                    onClick: () {
+                      onShowCircleModal(
+                          context: context,
+                          initialRoute: '/join-circle',
+                          onShowBack: false);
+                    },
+                    title: 'Join circle',
+                  ),
+                ),
+              ],
             ),
           ],
         ],

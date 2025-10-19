@@ -101,6 +101,7 @@ class MapNotifier extends StateNotifier<MapPageState> {
       state = state.copyWith(
         isLoading: false,
         hasCircle: true,
+        selectedCircle: circle,
         currentCircleId: circle.id,
         circleName: circle.name,
         circleMembers: members,

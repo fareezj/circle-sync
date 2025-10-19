@@ -130,7 +130,7 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
       children: [
         _buildMapWidget(mapState),
         _buildDatePicker(),
-        if (!mapState.isLocationAlwaysAllowed) _buildErrorTooltip(),
+        //  if (!mapState.isLocationAlwaysAllowed) _buildErrorTooltip(),
         if (!mapState.hasCircle) _buildCircleInfoCard(mapState),
         if (mapState.hasCircle) _buildDraggableBottomSheet(mapState),
         ..._buildOverlayWidgets(isLoading),
@@ -190,7 +190,7 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
           padding: EdgeInsets.all(12),
           decoration: BoxDecoration(
               color: AppColors.white, borderRadius: BorderRadius.circular(12)),
-          child: TextWidgets.mainRegular(
+          child: TextWidgets.mainSemiBold(
               title: ref.watch(mapNotifierProvider.notifier).selectedDate),
         ),
       ),
@@ -253,7 +253,6 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
             ),
             child: ListView(
               controller: scrollController,
-              physics: const ClampingScrollPhysics(),
               padding: EdgeInsets.zero,
               children: [
                 _buildTabChips(mapState),
@@ -354,6 +353,7 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
     return SizedBox(
       height: MediaQuery.of(context).size.height * 0.7,
       child: PageView(
+        physics: NeverScrollableScrollPhysics(),
         controller: _pageController,
         onPageChanged: (index) => ref
             .read(mapNotifierProvider.notifier)

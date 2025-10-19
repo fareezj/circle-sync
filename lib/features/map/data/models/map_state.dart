@@ -32,6 +32,7 @@ class MapPageState {
   final bool isLocationAlwaysAllowed;
   final File? chosenPostImage;
   final DateTime selectedDate;
+  final CircleModel? selectedCircle;
 
   MapPageState({
     required this.isLoading,
@@ -58,6 +59,7 @@ class MapPageState {
     this.isLocationAlwaysAllowed = false,
     this.chosenPostImage,
     required this.selectedDate,
+    this.selectedCircle,
   });
   factory MapPageState.initial() {
     return MapPageState(
@@ -84,6 +86,7 @@ class MapPageState {
       selectedChipItem: 0,
       isLocationAlwaysAllowed: false,
       chosenPostImage: null,
+      selectedCircle: null,
       selectedDate: DateTime.now(),
     );
   }
@@ -112,6 +115,7 @@ class MapPageState {
     bool? isLocationAlwaysAllowed,
     File? chosenPostImage,
     DateTime? selectedDate,
+    CircleModel? selectedCircle,
   }) {
     return MapPageState(
       isLoading: isLoading ?? this.isLoading,
@@ -139,6 +143,7 @@ class MapPageState {
       isLocationAlwaysAllowed:
           isLocationAlwaysAllowed ?? this.isLocationAlwaysAllowed,
       selectedDate: selectedDate ?? this.selectedDate,
+      selectedCircle: selectedCircle ?? this.selectedCircle,
     );
   }
 }

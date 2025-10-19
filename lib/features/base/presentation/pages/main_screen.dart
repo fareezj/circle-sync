@@ -56,11 +56,11 @@ class _MainPageState extends ConsumerState<MainPage> {
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.map),
-            label: 'home',
+            label: 'Circles',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),
-            label: 'account',
+            label: 'Account',
           ),
         ],
       ),
