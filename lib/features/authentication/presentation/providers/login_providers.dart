@@ -4,7 +4,7 @@ import 'package:circle_sync/providers/app_configs/app_configs_provider.dart';
 import 'package:circle_sync/route_generator.dart';
 import 'package:circle_sync/utils/field_validators.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:onesignal_flutter/onesignal_flutter.dart';
+// REMOVED: onesignal_flutter - third-party data collection risk
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class LoginNotifer extends StateNotifier<LoginPageModel> {
@@ -44,21 +44,20 @@ class LoginNotifer extends StateNotifier<LoginPageModel> {
       );
 
       final userId = res.user!.id;
-      final playerId = OneSignal.User.pushSubscription.id;
-      if (playerId != null) {
-        final updateRes = await supabase
-            .from('users')
-            .update({'onesignal_id': playerId})
-            .eq('user_id', userId)
-            .select();
+      // REMOVED: OneSignal integration - third-party data collection risk
 
-        final secureStorage = ref.read(secureStorageServiceProvider);
-        await secureStorage.writeData('isLoggedIn', 'true');
-        await secureStorage.writeData('name', updateRes[0]['name']);
-        await secureStorage.writeData('email', state.email);
-        await secureStorage.writeData('userId', userId);
-        await secureStorage.writeData('onesignalId', playerId);
-      }
+      final userRes = await supabase
+          .from('users')
+          .select('name')
+          .eq('user_id', userId)
+          .single();
+
+      final secureStorage = ref.read(secureStorageServiceProvider);
+      await secureStorage.writeData('isLoggedIn', 'true');
+      await secureStorage.writeData('name', userRes['name']);
+      await secureStorage.writeData('email', state.email);
+      await secureStorage.writeData('userId', userId);
+      // REMOVED: OneSignal ID storage
       navigatorKey.currentState?.pushReplacementNamed(RouteGenerator.mainPage);
     } catch (e) {
       ref.read(errorMessageNotifier.notifier).setError(e.toString());

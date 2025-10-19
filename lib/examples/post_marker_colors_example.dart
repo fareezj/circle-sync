@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:circle_sync/models/post_model.dart';
 import 'package:circle_sync/screens/widgets/post_marker.dart';
 
 /// Example demonstrating how PostMarker now shows different colors for different users
-class PostMarkerColorsExample extends StatelessWidget {
+class PostMarkerColorsExample extends ConsumerWidget {
   const PostMarkerColorsExample({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     // Create sample posts from different users to see color differences
     final samplePosts = [
       PostModel(
@@ -94,7 +95,7 @@ class PostMarkerColorsExample extends StatelessWidget {
                               border: Border.all(color: Colors.grey.shade300),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: PostMarker(post: post),
+                            child: PostMarker(post: post, ref: ref),
                           ),
                           const SizedBox(height: 8),
                           // Show user info

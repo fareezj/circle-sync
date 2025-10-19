@@ -1,15 +1,16 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
+    <!-- Location permissions - Only when app is in use to avoid Play Store rejection -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
-    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
-    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
-    <!-- Used by plugin: native_geofence -->
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
-    <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    
+    <!-- Removed dangerous permissions that could cause Play Store rejection:
+         - FOREGROUND_SERVICE_LOCATION (background location tracking)
+         - ACCESS_BACKGROUND_LOCATION (requires special approval)
+         - REQUEST_IGNORE_BATTERY_OPTIMIZATIONS (restricted permission)
+         - RECEIVE_BOOT_COMPLETED (privacy concern)
+         - WAKE_LOCK (battery drain concern)
+         - SCHEDULE_EXACT_ALARM (requires special handling)
+    -->
     <application
         android:label="circle_sync"
         android:name="${applicationName}"
@@ -38,21 +39,9 @@
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
-        <service
-            android:name="com.pravera.flutter_foreground_task.service.ForegroundService"
-            android:foregroundServiceType="dataSync|location"
-            android:exported="false" />
-        <!-- Used by plugin: native_geofence -->
-        <receiver android:name="com.chunkytofustudios.native_geofence.receivers.NativeGeofenceBroadcastReceiver"
-                android:exported="true"/>
-        <receiver android:name="com.chunkytofustudios.native_geofence.receivers.NativeGeofenceRebootBroadcastReceiver"
-                android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED"></action>
-            </intent-filter>
-        </receiver>
-        <service android:name="com.chunkytofustudios.native_geofence.NativeGeofenceForegroundService"
-                android:permission="android.permission.BIND_JOB_SERVICE" android:foregroundServiceType="location" android:exported="true"/>
+        
+        <!-- Removed foreground services and geofence services to avoid Play Store complications -->
+        
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />

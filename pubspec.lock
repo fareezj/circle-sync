@@ -510,14 +510,6 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
-  flutter_foreground_task:
-    dependency: "direct main"
-    description:
-      name: flutter_foreground_task
-      sha256: "9f1b25a81db95d7119d2c5cffc654048cbdd49d4056183e1beadc1a6a38f3e29"
-      url: "https://pub.dev"
-    source: hosted
-    version: "9.1.0"
   flutter_launcher_icons:
     dependency: "direct dev"
     description:
@@ -1048,14 +1040,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.0"
-  native_geofence:
-    dependency: "direct main"
-    description:
-      name: native_geofence
-      sha256: "01b6e9a4532f0869ba20af7ca28afd71be7570350f97b9262999db23e37e2689"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.1.0"
   nested:
     dependency: transitive
     description:
@@ -1064,14 +1048,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.0"
-  onesignal_flutter:
-    dependency: "direct main"
-    description:
-      name: onesignal_flutter
-      sha256: b5bb43bf496ddb5e3975ba54c6477cc2d1fcd18fb3698f195d2e0bfd376ddafd
-      url: "https://pub.dev"
-    source: hosted
-    version: "5.3.4"
   package_config:
     dependency: transitive
     description:

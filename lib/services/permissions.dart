@@ -20,10 +20,8 @@ class Permissions {
       if (permissionGranted != PermissionStatus.granted) return false;
     }
 
-    // Request background location permission (Android 10+)
-    if (await location.isBackgroundModeEnabled() == false) {
-      await location.enableBackgroundMode(enable: true);
-    }
+    // NOTE: Background location removed to avoid App Store rejection
+    // Only using when-in-use location access for better store approval
 
     return true;
   }

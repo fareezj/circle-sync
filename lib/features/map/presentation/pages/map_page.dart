@@ -28,7 +28,7 @@ import 'package:circle_sync/models/map_state_model.dart';
 
 // Local imports - Providers & Services
 import 'package:circle_sync/providers/app_configs/app_configs_provider.dart';
-import 'package:circle_sync/services/geofence_service.dart';
+// REMOVED: geofence_service.dart - causes App Store rejection
 
 // Local imports - Screens & Widgets
 import 'package:circle_sync/screens/widgets/circle_bottom_sheet.dart';
@@ -101,7 +101,7 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
       );
 
       if (circle != null) {
-        await initGeofence(ref: ref, circleId: circle.id);
+        // REMOVED: initGeofence - causes App Store rejection for background location
         await notifier.loadCircleDetails(circle, _mapController);
         //await notifier.getPlaces(circle.id);
       }
@@ -368,9 +368,11 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
   }
 
   Widget _buildPostsBottomSheet(MapPageState mapState) {
+    final getFilteredPosts =
+        ref.watch(mapNotifierProvider.notifier).postsForSelectedDate;
     return PostsBottomSheet(
       ref: ref,
-      posts: mapState.originalPosts,
+      posts: getFilteredPosts,
       circleId: mapState.currentCircleId,
       onPostSelected: (LatLng location) {
         _mapController.move(location, 13.0);
@@ -504,12 +506,12 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
             title: title,
           ),
         );
-    await initGeofence(ref: ref, circleId: mapState.currentCircleId);
+    //await initGeofence(ref: ref, circleId: mapState.currentCircleId);
     _switchToPlacesView();
   }
 
   Future<void> loadNewCircle(CircleModel circle) async {
-    await initGeofence(ref: ref, circleId: circle.id);
+    //await initGeofence(ref: ref, circleId: circle.id);
     await ref
         .read(mapNotifierProvider.notifier)
         .loadCircleDetails(circle, _mapController);

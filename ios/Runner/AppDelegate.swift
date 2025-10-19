@@ -1,7 +1,7 @@
 import UIKit
 import Flutter
-import flutter_foreground_task
-import native_geofence
+// REMOVED: flutter_foreground_task - causes App Store rejection
+// REMOVED: native_geofence - causes App Store rejection
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
@@ -11,16 +11,12 @@ import native_geofence
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
 
-            // Used by plugin: native_geofence
-    NativeGeofencePlugin.setPluginRegistrantCallback { registry in
-      GeneratedPluginRegistrant.register(with: registry)
-    }
-
-    // 1. Register flutter plugins
+    // REMOVED: Native geofence registration - causes App Store rejection
+    
+    // Register flutter plugins
     GeneratedPluginRegistrant.register(with: self)
     
-    // 2. Register background callbacks
-    SwiftFlutterForegroundTaskPlugin.setPluginRegistrantCallback(registerPlugins)
+    // REMOVED: Foreground task callbacks - causes App Store rejection
     
     // 3. Hook notification delegate (FlutterAppDelegate already conforms)
     if #available(iOS 10.0, *) {

@@ -9,7 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 // Local imports
 import 'package:circle_sync/providers/app_configs/app_configs_provider.dart';
-import 'package:circle_sync/services/location_fg.dart';
+// REMOVED: location_fg.dart - causes App Store rejection
 import 'package:circle_sync/services/location_service.dart';
 import 'package:circle_sync/services/permissions.dart';
 
@@ -69,12 +69,6 @@ class LocationManager {
 
       final circleIds =
           (response as List).map((r) => r['circle_id'] as String).toList();
-
-      await LocationTask.initForegroundTask();
-      await LocationTask.startForegroundTask(
-        userId: userId,
-        circleIds: circleIds,
-      );
     } catch (e) {
       debugPrint('Error starting foreground task: $e');
     }
@@ -83,7 +77,7 @@ class LocationManager {
   /// Stops the foreground location task
   Future<void> stopForegroundTask() async {
     try {
-      await LocationTask.stopForegroundTask();
+      //  await LocationTask.stopForegroundTask();
     } catch (e) {
       debugPrint('Error stopping foreground task: $e');
     }

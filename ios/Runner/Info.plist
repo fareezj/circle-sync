@@ -47,31 +47,17 @@
         <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
 
-    <!-- Background Modes -->
+    <!-- Background Modes - Removed location tracking to avoid App Store issues -->
     <key>UIBackgroundModes</key>
     <array>
-        <string>location</string>
         <string>fetch</string>
     </array>
 
-    <!-- Location Permissions -->
+    <!-- Location Permissions - Only when-in-use to avoid App Store rejection -->
     <key>NSLocationWhenInUseUsageDescription</key>
-    <string>This app needs access to location when open.</string>
-    <key>NSLocationAlwaysUsageDescription</key>
-    <string>Need this for live location update</string>
-    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-    <string>Your message when requesting background location</string>
-    <key>NSLocationTemporaryUsageDescriptionDictionary</key>
-    <dict>
-        <key>Home</key>
-        <string>The Circle Sync app requires temporary access to the device's precise location.</string>
-    </dict>
+    <string>Circle Sync needs location access to show your position on the map and help you find places when using the app.</string>
 
-    <!-- Background Task Scheduler -->
-    <key>BGTaskSchedulerPermittedIdentifiers</key>
-    <array>
-        <string>com.pravera.flutter_foreground_task.refresh</string>
-    </array>
+    <!-- Background Task Scheduler - Removed to avoid App Store complications -->
 
     <!-- Miscellaneous -->
     <key>CADisableMinimumFrameDurationOnPhone</key>

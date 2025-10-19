@@ -7,11 +7,11 @@ import 'package:circle_sync/utils/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+// REMOVED: flutter_foreground_task - causes App Store rejection
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:native_geofence/native_geofence.dart';
-import 'package:onesignal_flutter/onesignal_flutter.dart';
+// REMOVED: native_geofence - causes App Store rejection
+// REMOVED: onesignal_flutter - third-party data collection risk
 import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -21,7 +21,7 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  await NativeGeofenceManager.instance.initialize();
+  // REMOVED: NativeGeofenceManager initialization - causes App Store rejection
 
   final appDocDir = await getApplicationDocumentsDirectory();
   final hivePath = appDocDir.path;
@@ -34,31 +34,11 @@ void main() async {
   final prefs = await SharedPreferences.getInstance();
   await prefs.setString('hivePath', hivePath);
 
-  // Enable verbose logging for debugging (remove in production)
-  OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
-  // Initialize with your OneSignal App ID
-  OneSignal.initialize("ffd7d2ef-4055-4fa8-9916-06dfaeca6cf0");
-  // Use this method to prompt for push notifications.
-  // We recommend removing this method after testing and instead use In-App Messages to prompt for notification permission.
-  OneSignal.Notifications.requestPermission(false);
+  // REMOVED: OneSignal initialization - third-party data collection risk
+  // Use Firebase Cloud Messaging instead for better App Store compliance
 
-  FlutterForegroundTask.init(
-    androidNotificationOptions: AndroidNotificationOptions(
-      channelId: 'foreground_service',
-      channelName: 'Circle Sync Location Service',
-      channelDescription: 'Keeps Circle Sync running in the background',
-      channelImportance: NotificationChannelImportance.LOW,
-      priority: NotificationPriority.LOW,
-    ),
-    iosNotificationOptions: const IOSNotificationOptions(
-      showNotification: true,
-      playSound: false,
-    ),
-    foregroundTaskOptions: ForegroundTaskOptions(
-      autoRunOnBoot: true, // Restart on device reboot (Android)
-      allowWifiLock: true, eventAction: ForegroundTaskEventAction.repeat(500),
-    ),
-  );
+  // REMOVED: FlutterForegroundTask initialization - causes App Store rejection
+  // Background services are not allowed in current App Store guidelines
 
   await Supabase.initialize(
     url: 'https://ojctqcthzuwrckvixbcd.supabase.co',

@@ -4,7 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:circle_sync/models/circle_model.dart';
 import 'package:circle_sync/features/circles/data/datasources/circle_service.dart';
-import 'package:circle_sync/services/location_fg.dart';
+import 'package:circle_sync/providers/app_configs/app_configs_provider.dart';
+// REMOVED: location_fg.dart - causes App Store rejection
 import 'package:circle_sync/services/permissions.dart';
 import 'package:circle_sync/widgets/text_widgets.dart';
 import 'package:circle_sync/route_generator.dart';
@@ -25,7 +26,7 @@ class _CirclesPageState extends ConsumerState<CirclesPage> {
   void initState() {
     super.initState();
     _supabase = Supabase.instance.client;
-    LocationTask.initForegroundTask();
+    // REMOVED: LocationTask.initForegroundTask() - causes App Store rejection
   }
 
   @override
@@ -132,12 +133,10 @@ class _CirclesPageState extends ConsumerState<CirclesPage> {
           final circleIds =
               (resp as List).map((r) => r['circle_id'] as String).toList();
 
-          await LocationTask.initForegroundTask();
-          await LocationTask.startForegroundTask(
-            userId: userId,
-            circleIds: circleIds,
-          );
-          setState(() => _isTracking = true);
+          // REMOVED: LocationTask - causes App Store rejection for background tracking
+          // Background location tracking is disabled for App Store compliance
+          setState(() => _isTracking =
+              false); // Always false since background tracking removed
         } catch (e) {
           print('error: $e');
         }
@@ -147,7 +146,7 @@ class _CirclesPageState extends ConsumerState<CirclesPage> {
         );
       }
     } else {
-      await LocationTask.stopForegroundTask();
+      // REMOVED: LocationTask.stopForegroundTask() - causes App Store rejection
       setState(() => _isTracking = false);
     }
   }

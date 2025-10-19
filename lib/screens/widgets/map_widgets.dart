@@ -147,7 +147,6 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
     }
 
     // Posts markers
-    final selectedPostId = ref.watch(mapNotifierProvider).selectedPost?.id;
     widget.posts?.forEach((postId, post) {
       markers.add(
         Marker(

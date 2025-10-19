@@ -51,7 +51,7 @@ final getIsLoggedInProvider = secureStorageDataProvider('isLoggedIn');
 final getUsernameProvider = secureStorageDataProvider('name');
 final getEmailProvider = secureStorageDataProvider('email');
 final getUserIdProvider = secureStorageDataProvider('userId');
-final getOneSignalIdProvider = secureStorageDataProvider('oneSignalId');
+// REMOVED: OneSignal ID provider - third-party data collection risk
 
 // Global message notifier remains unchanged.
 class GlobalMessageNotifier extends StateNotifier<String?> {

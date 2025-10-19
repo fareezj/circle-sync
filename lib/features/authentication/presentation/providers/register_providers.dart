@@ -68,7 +68,7 @@ class RegisterNotifier extends StateNotifier<RegisterPageModel> {
         'user_id': userId,
         'email': state.email,
         'name': state.name,
-        'onesignal_id': '',
+        // REMOVED: onesignal_id field
       });
 
       final secureStorage = ref.read(secureStorageServiceProvider);
