@@ -369,6 +369,7 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
 
   Widget _buildPostsBottomSheet(MapPageState mapState) {
     return PostsBottomSheet(
+      ref: ref,
       posts: mapState.originalPosts,
       circleId: mapState.currentCircleId,
       onPostSelected: (LatLng location) {

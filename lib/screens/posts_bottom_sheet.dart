@@ -1,11 +1,14 @@
 import 'package:circle_sync/features/circles/data/models/circle_model.dart';
+import 'package:circle_sync/features/map/presentation/providers/map_providers.dart';
 import 'package:circle_sync/models/post_model.dart';
 import 'package:circle_sync/widgets/text_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:circle_sync/features/circles/data/datasources/circle_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
 class PostsBottomSheet extends StatelessWidget {
+  final WidgetRef ref;
   final Map<String, PostModel> posts;
   final String circleId;
   final Function(LatLng) onPostSelected;
@@ -13,6 +16,7 @@ class PostsBottomSheet extends StatelessWidget {
 
   const PostsBottomSheet({
     super.key,
+    required this.ref,
     required this.posts,
     required this.circleId,
     required this.onPostSelected,
@@ -72,6 +76,7 @@ class PostsBottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final selectedDate = ref.watch(mapNotifierProvider.notifier).selectedDate;
     return MediaQuery.removePadding(
       context: context,
       removeTop: true,
@@ -81,7 +86,12 @@ class PostsBottomSheet extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: TextWidgets.mainBold(title: 'Posts', fontSize: 20.0),
+            child: Row(
+              children: [
+                TextWidgets.mainBold(title: 'Posts: ', fontSize: 20.0),
+                TextWidgets.mainBold(title: selectedDate, fontSize: 20.0),
+              ],
+            ),
           ),
           const SizedBox(height: 24),
           Expanded(

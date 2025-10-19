@@ -211,6 +211,12 @@ class MapNotifier extends StateNotifier<MapPageState> {
   // UI state management methods
 
   String get selectedDate {
+    final today = DateTime.now();
+    if (DateTime(state.selectedDate.year, state.selectedDate.month,
+            state.selectedDate.day) ==
+        DateTime(today.year, today.month, today.day)) {
+      return 'Today';
+    }
     return DateFormat('dd MMM yyyy').format(state.selectedDate);
   }
 
