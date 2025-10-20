@@ -159,7 +159,7 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
       onCurrentLocationTap: () => _handleCurrentLocationTap(mapState),
       onOtherUserTap: (userId, loc) => showUserInfoDialog(context, userId, loc),
       places: mapState.placeList,
-      posts: mapState.posts,
+      posts: ref.watch(mapNotifierProvider.notifier).postsForSelectedDate,
       onOtherUserTapPost: (postId, post) =>
           showUserInfoDialog(context, postId, LatLng(post.lat, post.lng)),
     );

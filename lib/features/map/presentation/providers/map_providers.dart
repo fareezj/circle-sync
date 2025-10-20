@@ -230,6 +230,7 @@ class MapNotifier extends StateNotifier<MapPageState> {
           createdLocal.month == date.month &&
           createdLocal.day == date.day;
     });
+    print('AWOW SHOW POSTS: $filteredEntries');
     return Map<String, PostModel>.fromEntries(filteredEntries);
   }
 
@@ -362,6 +363,12 @@ class MapNotifier extends StateNotifier<MapPageState> {
     } finally {
       ref.read(baseLoadingNotifier.notifier).setLoading(false);
     }
+  }
+
+  /// Clears the chosen post image
+  void clearChosenImage() {
+    state = state.copyWith(chosenPostImage: null);
+    debugPrint('Chosen post image cleared');
   }
 }
 
