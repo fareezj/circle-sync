@@ -57,6 +57,12 @@
     <key>NSLocationWhenInUseUsageDescription</key>
     <string>Circle Sync needs location access to show your position on the map and help you find places when using the app.</string>
 
+    <!-- Camera and Photo Library Permissions -->
+    <key>NSCameraUsageDescription</key>
+    <string>Circle Sync needs camera access to take photos for your posts and check-ins.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>Circle Sync needs photo library access to select images for your posts and check-ins.</string>
+
     <!-- Background Task Scheduler - Removed to avoid App Store complications -->
 
     <!-- Miscellaneous -->

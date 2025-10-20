@@ -159,7 +159,8 @@ class MapNotifier extends StateNotifier<MapPageState> {
       _postsManager.subscribeToPostsUpdates(
         circleId: circle.id,
         onPostsUpdate: (posts) {
-          state = state.copyWith(posts: posts, originalPosts: posts);
+          state = state.copyWith(
+              posts: getPostsForDate(DateTime.now()), originalPosts: posts);
         },
       );
     } catch (e) {
@@ -347,10 +348,17 @@ class MapNotifier extends StateNotifier<MapPageState> {
       final imageFile = await _postsManager.processImageForPost(source);
       if (imageFile != null) {
         state = state.copyWith(chosenPostImage: imageFile);
+        debugPrint('Image selected successfully for post');
+      } else {
+        debugPrint('No image was selected');
       }
     } catch (e) {
       debugPrint('Error adding post image: $e');
-      rethrow;
+
+      // Show user-friendly error message
+      ref.read(errorMessageNotifier.notifier).setError(
+            e.toString().replaceAll('Exception: ', ''),
+          );
     } finally {
       ref.read(baseLoadingNotifier.notifier).setLoading(false);
     }

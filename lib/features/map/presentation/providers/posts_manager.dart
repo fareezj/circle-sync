@@ -133,11 +133,26 @@ class PostsManager {
   Future<File?> processImageForPost(ImageSource source) async {
     try {
       final picker = ImagePicker();
-      final picked = await picker.pickImage(source: source);
 
-      if (picked == null) return null;
+      // Configure image picker options
+      final picked = await picker.pickImage(
+        source: source,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 85, // Good balance between quality and file size
+      );
+
+      if (picked == null) {
+        debugPrint('No image selected');
+        return null;
+      }
 
       final file = File(picked.path);
+
+      // Check if file exists
+      if (!await file.exists()) {
+        throw Exception('Selected image file does not exist');
+      }
 
       // Validate file size (optional - you can add limits)
       final bytes = await file.readAsBytes();
@@ -155,10 +170,26 @@ class PostsManager {
         throw Exception('Selected file is not a valid image.');
       }
 
+      debugPrint('Image processed successfully: ${picked.path}');
+      debugPrint('Image size: ${(fileSize / 1024).toStringAsFixed(2)} KB');
+
       return file;
-    } catch (e) {
-      debugPrint('Error processing image: $e');
+    } on Exception catch (e) {
+      debugPrint('Known error processing image: $e');
       rethrow;
+    } catch (e) {
+      debugPrint('Unexpected error processing image: $e');
+      // Convert unknown errors to more user-friendly messages
+      if (e.toString().contains('camera')) {
+        throw Exception(
+            'Camera access denied. Please check your camera permissions.');
+      } else if (e.toString().contains('photo') ||
+          e.toString().contains('library')) {
+        throw Exception(
+            'Photo library access denied. Please check your photo permissions.');
+      } else {
+        throw Exception('Failed to process image. Please try again.');
+      }
     }
   }
 

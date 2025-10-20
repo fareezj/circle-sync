@@ -12,13 +12,15 @@ void addPostDialog({
   required Function(String, DateTime) onCreate, // Updated to include DateTime
 }) {
   TextEditingController controller = TextEditingController();
+  DateTime selectedTime = DateTime.now(); // Move outside to preserve state
+
   showDialog(
     context: context,
-    builder: (context) => Consumer(
-      builder: (context, ref, child) {
-        DateTime selectedTime = DateTime.now(); // Default to current time
-        return StatefulBuilder(
-          builder: (context, setState) => AlertDialog(
+    barrierDismissible: false, // Prevent accidental dismissal
+    builder: (context) => StatefulBuilder(
+      builder: (context, setState) => Consumer(
+        builder: (context, ref, child) {
+          return AlertDialog(
             backgroundColor: AppColors.white,
             title: const Text('Add new post'),
             contentPadding: const EdgeInsets.fromLTRB(24.0, 20.0, 24.0, 24.0),
@@ -320,7 +322,6 @@ void addPostDialog({
                               Expanded(
                                 child: GestureDetector(
                                   onTap: () {
-                                    Navigator.pop(context);
                                     onClickCamera();
                                   },
                                   child: Container(
@@ -387,9 +388,9 @@ void addPostDialog({
                 child: const Text('Close'),
               ),
             ],
-          ),
-        );
-      },
+          );
+        },
+      ),
     ),
   );
 }

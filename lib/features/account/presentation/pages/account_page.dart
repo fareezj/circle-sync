@@ -1,4 +1,5 @@
 import 'package:circle_sync/features/account/presentation/providers/account_providers.dart';
+import 'package:circle_sync/route_generator.dart';
 import 'package:circle_sync/utils/app_colors.dart';
 import 'package:circle_sync/widgets/text_widgets.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -51,10 +52,10 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                   TextWidgets.mainBold(title: pageState.email),
                   SizedBox(height: 16.0),
                   ElevatedButton(
-                    onPressed: () =>
-                        Navigator.pushNamed(context, '/permissionSettings'),
+                    onPressed: () => Navigator.pushNamed(
+                        context, RouteGenerator.settingsPage),
                     child: TextWidgets.mainSemiBold(
-                        title: 'App permission', color: AppColors.primaryBlue),
+                        title: 'Settings', color: AppColors.primaryBlue),
                   ),
                   SizedBox(height: 50.0),
                   IconButton(

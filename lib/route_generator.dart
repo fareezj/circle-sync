@@ -4,9 +4,9 @@ import 'package:circle_sync/features/authentication/presentation/pages/login_pag
 import 'package:circle_sync/features/base/presentation/pages/main_screen.dart';
 import 'package:circle_sync/features/authentication/presentation/pages/register_page.dart';
 import 'package:flutter/material.dart';
-import 'package:circle_sync/screens/users_screen.dart';
 import 'package:circle_sync/features/map/presentation/pages/map_page.dart';
 import 'package:circle_sync/screens/chat_screen.dart';
+import 'package:circle_sync/screens/settings_screen.dart';
 
 class RouteGenerator {
   static const String loginPage = '/login';
@@ -18,6 +18,7 @@ class RouteGenerator {
   static const String usersPage = '/usersPage';
   static const String circlePage = '/circlePage';
   static const String permissionSettings = '/permissionSettings';
+  static const String settingsPage = '/settingsPage';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -48,6 +49,8 @@ class RouteGenerator {
             otherUserId: args['otherUserId'],
           ),
         );
+      case settingsPage:
+        return MaterialPageRoute(builder: (_) => const SettingsScreen());
       default:
         return MaterialPageRoute(
           builder: (_) => const Scaffold(
