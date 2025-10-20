@@ -16,6 +16,7 @@ class CircleService {
 
     // Insert and get back the new record
     final rows = await _supabase.from('circles').insert({
+      'circle_id': 'circle_${Random().nextInt(5)}',
       'name': name,
       'created_by': user.id,
       'created_at': DateTime.now().toIso8601String(),

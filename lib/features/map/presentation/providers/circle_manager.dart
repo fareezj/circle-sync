@@ -7,9 +7,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // Local imports
 import 'package:circle_sync/features/circles/data/models/circle_model.dart';
 import 'package:circle_sync/features/circles/domain/usecases/circle_usecase.dart';
-import 'package:circle_sync/features/map/data/models/map_models.dart';
 import 'package:circle_sync/models/circle_model.dart';
 import 'package:circle_sync/providers/app_configs/app_configs_provider.dart';
+
+/// Result class for loading circles
+class CircleLoadResult {
+  final CircleModel? selectedCircle;
+  final List<CircleModel> allCircles;
+
+  CircleLoadResult({
+    this.selectedCircle,
+    required this.allCircles,
+  });
+
+  bool get hasCircles => allCircles.isNotEmpty;
+  bool get hasSelectedCircle => selectedCircle != null;
+}
 
 /// Manages circle-related operations for the map feature
 class CircleManager {
@@ -19,7 +32,7 @@ class CircleManager {
   CircleManager(this.ref, this.circleUsecase);
 
   /// Loads the initial circle for the user
-  Future<CircleModel?> loadInitialCircle({
+  Future<CircleLoadResult> loadInitialCircle({
     bool getLatestCircle = false,
   }) async {
     try {
@@ -28,20 +41,25 @@ class CircleManager {
       return result.fold(
         (failure) {
           debugPrint('Failed to load circles: ${failure.errorMessage}');
-          return null;
+          return CircleLoadResult(allCircles: []);
         },
         (circles) async {
-          if (circles.isEmpty) return null;
+          if (circles.isEmpty) {
+            return CircleLoadResult(allCircles: []);
+          }
 
           final selectedCircle = await _selectCircle(circles, getLatestCircle);
           await _saveCurrentCircleId(selectedCircle.id);
 
-          return selectedCircle;
+          return CircleLoadResult(
+            selectedCircle: selectedCircle,
+            allCircles: circles,
+          );
         },
       );
     } catch (e) {
       debugPrint('Error loading initial circle: $e');
-      return null;
+      return CircleLoadResult(allCircles: []);
     }
   }
 

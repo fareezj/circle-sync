@@ -359,7 +359,10 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
             .read(mapNotifierProvider.notifier)
             .updateSelectedChipItem(index),
         children: [
-          CircleBottomSheet(onCreateCircle: () {}),
+          CircleBottomSheet(
+            onCreateCircle: () {},
+            mapController: _mapController,
+          ),
           _buildMembersBottomSheet(mapState),
           _buildPostsBottomSheet(mapState),
         ],

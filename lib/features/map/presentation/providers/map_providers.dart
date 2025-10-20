@@ -80,11 +80,11 @@ class MapNotifier extends StateNotifier<MapPageState> {
   /// Loads the initial circle for the user
   Future<CircleModel?> loadInitialCircle({bool getLatestCircle = false}) async {
     try {
-      final circle = await _circleManager.loadInitialCircle(
+      final result = await _circleManager.loadInitialCircle(
         getLatestCircle: getLatestCircle,
       );
 
-      if (circle == null) {
+      if (!result.hasCircles) {
         state = state.copyWith(
           isLoading: false,
           hasCircle: false,
@@ -93,22 +93,33 @@ class MapNotifier extends StateNotifier<MapPageState> {
         return null;
       }
 
+      final selectedCircle = result.selectedCircle;
+      if (selectedCircle == null) {
+        state = state.copyWith(
+          isLoading: false,
+          hasCircle: false,
+          joinedCircles: result.allCircles,
+        );
+        return null;
+      }
+
       // Get circle members and current user info
-      final members = await _circleManager.getCircleMembers(circle.id);
+      final members = await _circleManager.getCircleMembers(selectedCircle.id);
       final currentUser = await _circleManager.getCurrentUserInfo();
 
       // Update state with circle information
       state = state.copyWith(
         isLoading: false,
         hasCircle: true,
-        selectedCircle: circle,
-        currentCircleId: circle.id,
-        circleName: circle.name,
+        selectedCircle: selectedCircle,
+        currentCircleId: selectedCircle.id,
+        circleName: selectedCircle.name,
         circleMembers: members,
         currentUser: currentUser,
+        joinedCircles: result.allCircles,
       );
 
-      return circle;
+      return selectedCircle;
     } catch (e) {
       debugPrint('Error loading initial circle: $e');
       state = state.copyWith(
