@@ -71,7 +71,7 @@ class _JoinCircleSheetState extends ConsumerState<JoinCircleSheet> {
     final code = _controllers.map((c) => c.text).join();
     await ref.read(circleNotifierProvider.notifier).joinCircle(code, () {
       widget.args.onJoinedCircle();
-    });
+    }, context);
   }
 
   @override

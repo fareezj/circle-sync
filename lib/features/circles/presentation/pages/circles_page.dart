@@ -98,7 +98,7 @@ class _CirclesPageState extends ConsumerState<CirclesPage> {
                             onPressed: () {
                               ref
                                   .read(circleNotifierProvider.notifier)
-                                  .joinCircle('', () {});
+                                  .joinCircle('', () {}, context);
                             },
                             child: Text('Join circle')),
                         ElevatedButton(
@@ -175,7 +175,8 @@ class _CirclesPageState extends ConsumerState<CirclesPage> {
               final circleName = nameController.text.trim();
               if (circleName.isNotEmpty) {
                 try {
-                  final circleId = await circleService.createCircle(circleName);
+                  final circleId =
+                      await circleService.createCircle(circleName, context);
                   Navigator.pop(context);
                   Navigator.pushNamed(
                     context,

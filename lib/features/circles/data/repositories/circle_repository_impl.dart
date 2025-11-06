@@ -4,6 +4,7 @@ import 'package:circle_sync/features/circles/data/models/circle_model.dart';
 import 'package:circle_sync/features/circles/domain/repositories/circle_repository.dart';
 import 'package:circle_sync/models/circle_model.dart';
 import 'package:dartz/dartz.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final circleRepositoryProvider =
@@ -11,9 +12,10 @@ final circleRepositoryProvider =
 
 class CircleRepositoryImpl implements CircleRepository {
   @override
-  Future<Either<Failure, void>> joinCircle(String code) async {
+  Future<Either<Failure, void>> joinCircle(
+      String code, BuildContext context) async {
     try {
-      final result = CircleService().joinCircle(code);
+      final result = CircleService().joinCircle(code, context);
       return Right(result);
     } catch (e) {
       return Left(ServerError(errorMessage: e));
@@ -42,9 +44,10 @@ class CircleRepositoryImpl implements CircleRepository {
   }
 
   @override
-  Future<Either<Failure, void>> createCircle(String circleName) async {
+  Future<Either<Failure, void>> createCircle(
+      String circleName, BuildContext context) async {
     try {
-      final result = await CircleService().createCircle(circleName);
+      final result = await CircleService().createCircle(circleName, context);
       return Right(result);
     } catch (e) {
       return Left(ServerError(errorMessage: e.toString()));

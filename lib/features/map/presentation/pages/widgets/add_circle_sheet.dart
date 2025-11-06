@@ -53,7 +53,7 @@ class _AddCircleSheetState extends ConsumerState<AddCircleSheet> {
                   .read(circleNotifierProvider.notifier)
                   .createCircle(ref, _circleNameController.text, () {
                 widget.args.onAddedCircle();
-              });
+              }, context);
             },
             title: 'Create Circle',
           ),

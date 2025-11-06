@@ -1,6 +1,7 @@
 import 'package:circle_sync/features/circles/data/models/circle_model.dart';
 import 'package:circle_sync/features/map/presentation/providers/map_providers.dart';
 import 'package:circle_sync/models/circle_model.dart';
+import 'package:circle_sync/widgets/confirm_button.dart';
 import 'package:circle_sync/widgets/text_widgets.dart';
 import 'package:circle_sync/features/circles/data/datasources/circle_service.dart';
 import 'package:circle_sync/utils/app_colors.dart';
@@ -29,16 +30,36 @@ class _CircleBottomSheetState extends State<CircleBottomSheet>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final CircleService _circleService = CircleService();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _codeController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+
+    // Listen to text changes for button state updates
+    _nameController.addListener(_updateCreateButtonState);
+    _codeController.addListener(_updateJoinButtonState);
+  }
+
+  void _updateCreateButtonState() {
+    // Only rebuild if the button state actually changes
+    setState(() {});
+  }
+
+  void _updateJoinButtonState() {
+    // Only rebuild if the button state actually changes
+    setState(() {});
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _nameController.removeListener(_updateCreateButtonState);
+    _codeController.removeListener(_updateJoinButtonState);
+    _nameController.dispose();
+    _codeController.dispose();
     super.dispose();
   }
 
@@ -94,9 +115,24 @@ class _CircleBottomSheetState extends State<CircleBottomSheet>
                   labelStyle: const TextStyle(
                       fontWeight: FontWeight.w600, fontSize: 12),
                   tabs: const [
-                    Tab(text: 'My Circles'),
-                    Tab(text: 'Create'),
-                    Tab(text: 'Join'),
+                    Tab(
+                        child: Padding(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                      child: Text('My Circles'),
+                    )),
+                    Tab(
+                        child: Padding(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                      child: Text('Create'),
+                    )),
+                    Tab(
+                        child: Padding(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                      child: Text('Join'),
+                    )),
                   ],
                 ),
               ),
@@ -266,8 +302,6 @@ class _CircleBottomSheetState extends State<CircleBottomSheet>
   }
 
   Widget _buildCreateCircleTab(WidgetRef ref) {
-    final TextEditingController nameController = TextEditingController();
-
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -287,7 +321,7 @@ class _CircleBottomSheetState extends State<CircleBottomSheet>
           ),
           const SizedBox(height: 24),
           TextField(
-            controller: nameController,
+            controller: _nameController,
             decoration: InputDecoration(
               labelText: 'Circle Name',
               hintText: 'Enter circle name...',
@@ -302,37 +336,16 @@ class _CircleBottomSheetState extends State<CircleBottomSheet>
             ),
           ),
           const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () => _createCircle(nameController.text, ref),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.blueBorder,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.add, size: 20),
-                  const SizedBox(width: 8),
-                  TextWidgets.mainBold(
-                      title: 'Create Circle', color: Colors.white),
-                ],
-              ),
-            ),
-          ),
+          ConfirmButton(
+              isEnabled: _nameController.text.isNotEmpty,
+              onClick: () => _createCircle(_nameController.text, ref),
+              title: 'Create circle'),
         ],
       ),
     );
   }
 
   Widget _buildJoinCircleTab(WidgetRef ref) {
-    final TextEditingController codeController = TextEditingController();
-
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -352,9 +365,9 @@ class _CircleBottomSheetState extends State<CircleBottomSheet>
           ),
           const SizedBox(height: 24),
           TextField(
-            controller: codeController,
+            controller: _codeController,
             decoration: InputDecoration(
-              labelText: 'Circle ID or Code',
+              labelText: 'Invitation code',
               hintText: 'Enter circle ID...',
               prefixIcon: Icon(Icons.qr_code, color: AppColors.blueBorder),
               border: OutlineInputBorder(
@@ -367,29 +380,10 @@ class _CircleBottomSheetState extends State<CircleBottomSheet>
             ),
           ),
           const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () => _joinCircle(codeController.text, ref),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.group_add, size: 20),
-                  const SizedBox(width: 8),
-                  TextWidgets.mainBold(
-                      title: 'Join Circle', color: Colors.white),
-                ],
-              ),
-            ),
-          ),
+          ConfirmButton(
+              isEnabled: _codeController.text.isNotEmpty,
+              onClick: () => _joinCircle(_codeController.text, ref),
+              title: 'Join circle'),
         ],
       ),
     );
@@ -408,7 +402,7 @@ class _CircleBottomSheetState extends State<CircleBottomSheet>
         return;
       }
 
-      await _circleService.createCircle(name.trim());
+      await _circleService.createCircle(name.trim(), context);
       // Refresh the circles list to pick up the new circle
       await ref
           .read(mapNotifierProvider.notifier)
@@ -421,9 +415,9 @@ class _CircleBottomSheetState extends State<CircleBottomSheet>
     }
   }
 
-  Future<void> _joinCircle(String circleId, WidgetRef ref) async {
-    if (circleId.trim().isEmpty) {
-      _showError('Please enter a circle ID');
+  Future<void> _joinCircle(String invitationCode, WidgetRef ref) async {
+    if (invitationCode.trim().isEmpty) {
+      _showError('Please enter a invitation code');
       return;
     }
 
@@ -435,21 +429,22 @@ class _CircleBottomSheetState extends State<CircleBottomSheet>
       }
 
       // Try to get the circle to see if it exists
-      CircleModel circle;
-      try {
-        circle = await _circleService.getCircle(circleId.trim());
-      } catch (e) {
-        _showError('Circle not found');
-        return;
-      }
+      // CircleModel circle;
+      // try {
+      //   circle = await _circleService.getCircle(circleId.trim());
+      // } catch (e) {
+      //   _showError('Circle not found');
+      //   return;
+      // }
 
-      await _circleService.addMember(circleId.trim(), currentUserId);
+      //await _circleService.addMember(circleId.trim(), currentUserId);
+      await _circleService.joinCircle(invitationCode, context);
       // Refresh the circles list to update with the new joined circle
       await ref
           .read(mapNotifierProvider.notifier)
           .loadInitialCircle(getLatestCircle: true);
 
-      _showSuccess('Successfully joined "${circle.name}"!');
+      // _showSuccess('Successfully joined "${circle.name}"!');
       _tabController.animateTo(0); // Switch to My Circles tab
     } catch (e) {
       _showError('Failed to join circle: $e');
