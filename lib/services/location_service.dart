@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:circle_sync/models/post_model.dart';
+import 'package:circle_sync/models/user.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
@@ -235,7 +236,7 @@ class LocationService {
   void subscribeToOtherUsersLocations({
     required String circleId,
     required String currentUserId, // Add this parameter to match map_page.dart
-    required Function(Map<String, LatLng>) onLocationsUpdate,
+    required Function(Map<String, UserLocationInfo>) onLocationsUpdate,
   }) {
     _realtimeSubscription = _supabase
         .from('locations') // 1) subscribe to the table
@@ -244,8 +245,9 @@ class LocationService {
         ]) // 2) tell it what your PK is (matches DB schema)
         .eq('circle_id', circleId) // 3) apply your filter
         .listen((rows) {
+          print('MEOWW');
           print('🎯 Real-time location update received: ${rows.length} rows');
-          final Map<String, LatLng> updated = {};
+          final Map<String, UserLocationInfo> updated = {};
 
           for (final row in rows as List) {
             final rowUid = row['user_id'] as String;
@@ -256,8 +258,14 @@ class LocationService {
             }
             final lat = (row['lat'] as num).toDouble();
             final lng = (row['lng'] as num).toDouble();
-            updated[rowUid] = LatLng(lat, lng);
-            print('  ✅ Added location for $rowUid: $lat, $lng');
+            updated[rowUid] = UserLocationInfo(
+              id: row['id'].toString(),
+              userId: row['user_id'],
+              location: LatLng(lat, lng),
+              lastUpdate: row['updated_at'].toString(),
+            );
+            print(
+                ' ✅ Added location for $rowUid: $lat, $lng, ${row['updated_at']}');
           }
           print('🗺️ Final other user locations map: $updated');
           onLocationsUpdate(updated);

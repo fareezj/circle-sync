@@ -4,7 +4,7 @@ import 'package:circle_sync/features/circles/data/models/circle_model.dart';
 import 'package:circle_sync/features/map/data/models/map_models.dart';
 import 'package:circle_sync/models/circle_model.dart';
 import 'package:circle_sync/models/post_model.dart';
-import 'package:intl/intl.dart';
+import 'package:circle_sync/models/user.dart';
 import 'package:latlong2/latlong.dart';
 
 class MapPageState {
@@ -25,7 +25,7 @@ class MapPageState {
   final LatLng? destinationLocation;
   final List<LatLng> osrmRoutePoints;
   final List<LatLng> trackingPoints;
-  final Map<String, LatLng> otherUsersLocations;
+  final Map<String, UserLocationInfo> otherUsersLocations;
   final Map<String, PostModel> originalPosts;
   final Map<String, PostModel> posts;
   final int selectedChipItem;
@@ -108,7 +108,7 @@ class MapPageState {
     LatLng? destinationLocation,
     List<LatLng>? osrmRoutePoints,
     List<LatLng>? trackingPoints,
-    Map<String, LatLng>? otherUsersLocations,
+    Map<String, UserLocationInfo>? otherUsersLocations,
     Map<String, PostModel>? originalPosts,
     Map<String, PostModel>? posts,
     int? selectedChipItem,

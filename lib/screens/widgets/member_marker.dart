@@ -1,15 +1,19 @@
 import 'package:circle_sync/features/circles/data/models/circle_model.dart';
+import 'package:circle_sync/models/user.dart';
 import 'package:circle_sync/utils/app_colors.dart';
 import 'package:circle_sync/widgets/text_widgets.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class MemberMarker extends StatelessWidget {
   final CircleMembersModel user;
+  final UserLocationInfo locationInfo;
   final bool isSelected;
 
   const MemberMarker({
     super.key,
     required this.user,
+    required this.locationInfo,
     this.isSelected = false,
   });
 
@@ -34,7 +38,17 @@ class MemberMarker extends StatelessWidget {
                   ),
                 ],
               ),
-              child: TextWidgets.mainBold(title: user.name, fontSize: 12),
+              child: Column(
+                children: [
+                  TextWidgets.mainBold(title: user.name, fontSize: 12),
+                  if (locationInfo.lastUpdate != null)
+                    Text(
+                      'Last update: ${DateFormat('dd/MM HH:mm').format(
+                        DateTime.parse(locationInfo.lastUpdate!),
+                      )}',
+                    )
+                ],
+              ),
             ),
           ),
         CircleAvatar(

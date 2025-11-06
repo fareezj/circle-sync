@@ -171,11 +171,11 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
     });
 
     // Other users' markers
-    widget.mapState.otherUsersLocations.forEach((userId, loc) {
+    widget.mapState.otherUsersLocations.forEach((userId, userLocation) {
       final members = widget.members ?? [];
 
       // Debug logging
-      debugPrint('🔍 Checking userId: $userId at location: $loc');
+      debugPrint('🔍 Checking userId: $userId at location: $userLocation');
       debugPrint(
           '📋 Available members: ${members.map((m) => m.userId).toList()}');
 
@@ -187,11 +187,11 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
             '❌ No member data for userId: $userId - showing generic marker');
         markers.add(
           Marker(
-            point: loc,
+            point: userLocation.location,
             width: 40,
             height: 40,
             child: GestureDetector(
-              onTap: () => widget.onOtherUserTap(userId, loc),
+              onTap: () => widget.onOtherUserTap(userId, userLocation.location),
               child: const Icon(
                 Icons.person_pin_circle,
                 color: Colors.orange,
@@ -208,9 +208,9 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
       markers.add(
         Marker(
           key: ValueKey('member_$userId'),
-          point: loc,
+          point: userLocation.location,
           width: 200, // <-- match the child's max width
-          height: 100, // <-- match the child's max height
+          height: 200, // <-- match the child's max height
           child: GestureDetector(
             onTap: () {
               ref
@@ -220,6 +220,7 @@ class _MapWidgetState extends ConsumerState<MapWidget> {
             child: MemberMarker(
               key: ValueKey('member_marker_$userId'),
               user: member,
+              locationInfo: userLocation,
               isSelected: selectedMemberId == userId,
             ),
           ),

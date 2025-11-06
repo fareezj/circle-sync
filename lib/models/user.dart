@@ -1,3 +1,5 @@
+import 'package:latlong2/latlong.dart';
+
 class AppUser {
   final String id;
   final String name;
@@ -19,4 +21,18 @@ class AppUser {
       email: json['email'] as String,
     );
   }
+}
+
+class UserLocationInfo {
+  final String id;
+  final String userId;
+  final LatLng location;
+  final String? lastUpdate;
+
+  UserLocationInfo({
+    required this.id,
+    required this.userId,
+    required this.location,
+    required this.lastUpdate,
+  });
 }

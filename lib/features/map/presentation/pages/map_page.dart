@@ -391,9 +391,9 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
       circleId: mapState.currentCircleId,
       otherUsersLocations: mapState.otherUsersLocations,
       onMemberSelected: (memberId) {
-        final location = mapState.otherUsersLocations[memberId];
-        if (location != null) {
-          _mapController.move(location, 13.0);
+        final userLocation = mapState.otherUsersLocations[memberId];
+        if (userLocation != null) {
+          _mapController.move(userLocation.location, 13.0);
         }
       },
       onMemberAdded: (newId) {},

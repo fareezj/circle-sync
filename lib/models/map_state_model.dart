@@ -1,3 +1,4 @@
+import 'package:circle_sync/models/user.dart';
 import 'package:latlong2/latlong.dart';
 
 class MapState {
@@ -5,7 +6,7 @@ class MapState {
   LatLng? destinationLocation;
   List<LatLng> osrmRoutePoints;
   List<LatLng> trackingPoints;
-  Map<String, LatLng> otherUsersLocations;
+  Map<String, UserLocationInfo> otherUsersLocations;
 
   MapState({
     this.currentLocation,
@@ -20,7 +21,7 @@ class MapState {
     LatLng? destinationLocation,
     List<LatLng>? osrmRoutePoints,
     List<LatLng>? trackingPoints,
-    Map<String, LatLng>? otherUsersLocations,
+    Map<String, UserLocationInfo>? otherUsersLocations,
   }) {
     return MapState(
       currentLocation: currentLocation ?? this.currentLocation,

@@ -1,4 +1,5 @@
 // Flutter imports
+import 'package:circle_sync/models/user.dart';
 import 'package:flutter/foundation.dart';
 
 // Third-party package imports
@@ -87,7 +88,7 @@ class LocationManager {
   Future<void> initLocationTracking({
     required String circleId,
     required Function(LatLng, LatLng?, List<LatLng>) onLocationUpdate,
-    required Function(Map<String, LatLng>) onOtherUsersUpdate,
+    required Function(Map<String, UserLocationInfo>) onOtherUsersUpdate,
   }) async {
     try {
       await _locationService.initInitialLocationAndRoute(
@@ -121,7 +122,7 @@ class LocationManager {
   /// Subscribes to other users' locations in a circle
   void _subscribeToOtherUsersLocations({
     required String circleId,
-    required Function(Map<String, LatLng>) onLocationsUpdate,
+    required Function(Map<String, UserLocationInfo>) onLocationsUpdate,
   }) {
     try {
       final currentUserId = Supabase.instance.client.auth.currentUser?.id;
