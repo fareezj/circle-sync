@@ -15,7 +15,7 @@ class CircleNotifier extends StateNotifier<CirclePageState> {
       Function() onSuccess, BuildContext context) async {
     try {
       state = state.copyWith(isLoading: true);
-      final result = await circleUsecase.createCircle(circleName, context);
+      final result = await circleUsecase.createCircle(circleName);
       result.fold((_) {
         ref
             .read(globalMessageNotifier.notifier)
@@ -35,7 +35,7 @@ class CircleNotifier extends StateNotifier<CirclePageState> {
   Future<void> joinCircle(
       String code, Function() onSuccess, BuildContext context) async {
     try {
-      final result = await circleUsecase.joinCircle(code, context);
+      final result = await circleUsecase.joinCircle(code);
       result.fold((_) {
         ref
             .read(globalMessageNotifier.notifier)

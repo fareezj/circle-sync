@@ -1,7 +1,6 @@
 import 'dart:math';
 
 import 'package:circle_sync/features/circles/data/models/circle_model.dart';
-import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:circle_sync/models/circle_model.dart';
 
@@ -9,7 +8,7 @@ class CircleService {
   final SupabaseClient _supabase = Supabase.instance.client;
 
   /// 1. Create a new circle, return its ID
-  Future<String> createCircle(String name, BuildContext context) async {
+  Future<String> createCircle(String name) async {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('User not authenticated');
 
@@ -24,7 +23,7 @@ class CircleService {
       'join_code': joinCode
     }).select();
 
-    joinCircle(joinCode, context);
+    await joinCircle(joinCode);
 
     // rows is List<dynamic>, so cast to List<Map>
     if (rows.isEmpty) {
@@ -68,7 +67,7 @@ class CircleService {
     }
   }
 
-  Future<void> joinCircle(String joinCode, BuildContext context) async {
+  Future<void> joinCircle(String joinCode) async {
     try {
       print('JOIN CODE: $joinCode');
       // 1) Lookup the circle by code
@@ -86,9 +85,7 @@ class CircleService {
           'joined_at': DateTime.now().toUtc().toIso8601String(),
           'role': 'member'
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Successfully join ${circle['name']}')),
-        );
+        // Success - caller will handle showing success message
       }
     } catch (e) {
       print('ERROR: $e');

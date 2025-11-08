@@ -37,21 +37,15 @@ class _OnboardingPageState extends State<OnboardingPage> {
     ),
     _OnboardingPage(
       icon: Icons.play_arrow,
-      title: 'Background Tracking',
+      title: 'Location Sharing',
       description:
-          'With “Always Allow,” Circle Sync can keep sharing your location in the background—so your circle stays in sync without you having to reopen the app.',
+          'Circle Sync shares your location when you use the app—keeping your circle updated while you stay in control.',
     ),
-    // _OnboardingPage(
-    //   icon: Icons.warning,
-    //   title: 'Instant Safety Alerts',
-    //   description:
-    //       'In emergencies, your circle can see your last known location—no delays, no manual check-ins.',
-    // ),
     _OnboardingPage(
       icon: Icons.check_circle,
-      title: 'Seamless Check-Ins',
+      title: 'Easy Updates',
       description:
-          'Because location is always on, you never have to tap “Check In.” We’ll automatically update your circle when you move.',
+          'Your location updates when the app is open, so your circle knows where you are when it matters.',
     ),
     _OnboardingPage(
       icon: Icons.favorite,
@@ -67,9 +61,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
     ),
     _OnboardingPage(
       icon: Icons.location_on,
-      title: 'Enable Always Allow',
+      title: 'Enable Location',
       description:
-          'Let’s grant background location so Circle Sync can work its magic. Tap “Enable” and select “Always Allow” in the next screen.',
+          'Let\'s grant location permission so Circle Sync can share your location when you use the app. Tap "Enable" to continue.',
       isLast: true,
     ),
   ];
@@ -154,7 +148,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
           isLast
               ? ElevatedButton(
                   onPressed: () async {
-                    await _ensureAlwaysLocation();
+                    await _ensureWhenInUseLocation();
                     widget.onFinish();
                   },
                   child: const Text('Enable Location'),
@@ -173,13 +167,14 @@ class _OnboardingPageState extends State<OnboardingPage> {
     );
   }
 
-  Future<bool> _ensureAlwaysLocation() async {
+  Future<bool> _ensureWhenInUseLocation() async {
     // 1. Ensure services are enabled
     if (!await Geolocator.isLocationServiceEnabled()) {
       await Geolocator.openLocationSettings();
       return false;
     }
-    // 2. Request WhenInUse
+
+    // 2. Request When In Use permission
     var status = await Permission.locationWhenInUse.status;
     if (status != PermissionStatus.granted) {
       status = await Permission.locationWhenInUse.request();
@@ -188,15 +183,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
         return false;
       }
     }
-    // 3. Request Always
-    status = await Permission.locationAlways.status;
-    if (status != PermissionStatus.granted) {
-      status = await Permission.locationAlways.request();
-      if (status != PermissionStatus.granted) {
-        await openAppSettings();
-        return false;
-      }
-    }
+
     return true;
   }
 }

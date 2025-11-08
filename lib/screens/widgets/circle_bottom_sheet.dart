@@ -402,14 +402,24 @@ class _CircleBottomSheetState extends State<CircleBottomSheet>
         return;
       }
 
-      await _circleService.createCircle(name.trim(), context);
-      // Refresh the circles list to pick up the new circle
+      await _circleService.createCircle(name.trim());
+
+      // Clear the text field
+      _nameController.clear();
+
+      // Reload the circles without invalidating to avoid disposing active subscriptions
       await ref
           .read(mapNotifierProvider.notifier)
           .loadInitialCircle(getLatestCircle: true);
 
       _showSuccess('Circle "$name" created successfully!');
-      _tabController.animateTo(0); // Switch to My Circles tab
+
+      // Switch to My Circles tab after a short delay to ensure state is updated
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted) {
+          _tabController.animateTo(0);
+        }
+      });
     } catch (e) {
       _showError('Failed to create circle: $e');
     }
@@ -428,24 +438,22 @@ class _CircleBottomSheetState extends State<CircleBottomSheet>
         return;
       }
 
-      // Try to get the circle to see if it exists
-      // CircleModel circle;
-      // try {
-      //   circle = await _circleService.getCircle(circleId.trim());
-      // } catch (e) {
-      //   _showError('Circle not found');
-      //   return;
-      // }
+      await _circleService.joinCircle(invitationCode);
 
-      //await _circleService.addMember(circleId.trim(), currentUserId);
-      await _circleService.joinCircle(invitationCode, context);
-      // Refresh the circles list to update with the new joined circle
+      // Clear the text field
+      _codeController.clear();
+
+      // Reload the circles without invalidating to avoid disposing active subscriptions
       await ref
           .read(mapNotifierProvider.notifier)
           .loadInitialCircle(getLatestCircle: true);
 
-      // _showSuccess('Successfully joined "${circle.name}"!');
-      _tabController.animateTo(0); // Switch to My Circles tab
+      // Switch to My Circles tab after a short delay to ensure state is updated
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted) {
+          _tabController.animateTo(0);
+        }
+      });
     } catch (e) {
       _showError('Failed to join circle: $e');
     }

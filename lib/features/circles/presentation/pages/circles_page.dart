@@ -175,8 +175,7 @@ class _CirclesPageState extends ConsumerState<CirclesPage> {
               final circleName = nameController.text.trim();
               if (circleName.isNotEmpty) {
                 try {
-                  final circleId =
-                      await circleService.createCircle(circleName, context);
+                  final circleId = await circleService.createCircle(circleName);
                   Navigator.pop(context);
                   Navigator.pushNamed(
                     context,
