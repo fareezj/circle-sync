@@ -26,7 +26,7 @@ class CircleUsecase {
     return circleRepository.getCircleMembers(circleId);
   }
 
-  Future<Either<Failure, List<CircleModel>>> getJoinedCircles() async {
-    return circleRepository.getJoinedCircles();
+  Future<Either<Failure, List<CircleModel>>> getJoinedCircles(Ref ref) async {
+    return circleRepository.getJoinedCircles(ref);
   }
 }

@@ -63,7 +63,7 @@ class CircleNotifier extends StateNotifier<CirclePageState> {
   Future<List<CircleModel>> getJoinedCircles() async {
     try {
       List<CircleModel> circleList = [];
-      final result = await circleUsecase.getJoinedCircles();
+      final result = await circleUsecase.getJoinedCircles(ref);
       result.fold((_) {}, (res) => circleList = res);
       return circleList;
     } catch (e) {

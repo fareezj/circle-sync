@@ -36,7 +36,7 @@ class CircleManager {
     bool getLatestCircle = false,
   }) async {
     try {
-      final result = await circleUsecase.getJoinedCircles();
+      final result = await circleUsecase.getJoinedCircles(ref);
 
       return result.fold(
         (failure) {

@@ -32,9 +32,9 @@ class CircleRepositoryImpl implements CircleRepository {
   }
 
   @override
-  Future<Either<Failure, List<CircleModel>>> getJoinedCircles() async {
+  Future<Either<Failure, List<CircleModel>>> getJoinedCircles(Ref ref) async {
     try {
-      final result = await CircleService().getJoinedCircles();
+      final result = await CircleService().getJoinedCircles(ref);
       return Right(result);
     } catch (e) {
       return Left(ServerError(errorMessage: e.toString()));

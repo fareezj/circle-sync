@@ -1,6 +1,8 @@
 import 'dart:math';
 
 import 'package:circle_sync/features/circles/data/models/circle_model.dart';
+import 'package:circle_sync/providers/app_configs/app_configs_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:circle_sync/models/circle_model.dart';
 
@@ -159,9 +161,9 @@ class CircleService {
     }
   }
 
-  Future<List<CircleModel>> getJoinedCircles() async {
+  Future<List<CircleModel>> getJoinedCircles(Ref ref) async {
     try {
-      final userId = _supabase.auth.currentUser!.id;
+      final userId = await ref.read(getUserIdProvider.future);
 
       print('USER ID: $userId');
 
@@ -169,7 +171,7 @@ class CircleService {
       final memberResponse = await _supabase
           .from('circle_members')
           .select('circle_id')
-          .eq('user_id', userId);
+          .eq('user_id', userId ?? '');
 
       print('MEMBER RESPONSE: $memberResponse');
 

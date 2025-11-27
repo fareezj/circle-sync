@@ -31,6 +31,8 @@ class _CirclesPageState extends ConsumerState<CirclesPage> {
 
   @override
   Widget build(BuildContext context) {
+    final circleProvider = ref.watch(circleNotifierProvider.notifier);
+
     return Scaffold(
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -50,7 +52,7 @@ class _CirclesPageState extends ConsumerState<CirclesPage> {
               children: [
                 TextWidgets.mainBold(title: 'Your Circles', fontSize: 24.0),
                 FutureBuilder<List<CircleModel>>(
-                  future: circleService.getJoinedCircles(),
+                  future: circleProvider.getJoinedCircles(),
                   builder: (context, snapshot) {
                     if (!snapshot.hasData) {
                       return const Padding(
